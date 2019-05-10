@@ -1,2 +1,2 @@
-# vuepy
+# vue2pyj
 coming soon
