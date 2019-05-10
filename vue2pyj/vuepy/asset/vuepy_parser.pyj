@@ -1,0 +1,779 @@
+def strip_quotes(s):
+    if s[0] == "'" or s[0] == '"':
+        return s[1:-1]
+    return s
+
+def attrs2hash(attr_list):
+    ret = {}
+    attr_list.forEach(def(it): ret[it.name] = it;)
+    return ret
+
+def attrs_assign(attrs_base, attrs_extra):
+    if not (attrs_base and len(attrs_base)):
+        return attrs_extra[:]
+    elif not (attrs_extra and len(attrs_extra)):
+        return attrs_base[:]
+    attrs_hash = Object.assign(attrs2hash(attrs_base), attrs2hash(attrs_extra))
+    ret = []
+    for k in attrs_hash:
+        ret.push(attrs_hash[k])
+    return ret
+
+
+class ParserError(Error):
+    def __init__(self, message, line, col, pos, is_eof):
+        self.message = message
+        self.line = line
+        self.col = col
+        self.pos = pos
+        self.stack = Error().stack
+        self.is_eof = is_eof
+
+class OutputError(Error):
+    def __init__(self, message, line, col, pos):
+        self.message = message
+        if type(line) == 'Array':
+            lcp = line
+            line = lcp[0]
+            col = lcp[1]
+            pos = lcp[2]
+        self.line = line
+        self.col = col
+        self.pos = pos
+        self.stack = Error().stack
+
+
+class Stream:
+    def __init__(self, src):
+        self.RE = /(( *).*)(\n|$)/g
+        self.src = src
+        self.line = 0
+        self.col = 0
+        self.string = None
+        self._string = ''
+        self.indent = 0
+        self.is_last_line = False
+        self.start_line_pos = 0
+
+    def pos(self):
+        return  self.start_line_pos + self.col
+
+    def eof(self):
+        return self.is_last_line and self.eol()
+
+    def next_line(self):
+        while not ((ret = self._next_line()) and ret.trim() or self.eof()):
+            self.eat_space()
+        return ret
+
+    def _next_line(self):
+        if self.is_last_line:
+            return None
+        self.start_line_pos += self._string.length
+        ret = self.RE.exec(self.src)
+        self._string = ret[0]
+        self.indent = ret[2].length
+        self.string = ret[1]
+        self.is_last_line = not ret[3]
+        self.line += 1
+        self.col = 0
+        return ret[1]
+
+    def match(self, m, eat):
+        if type(m) == 'String':
+            m = RegExp('^' + m)
+        ret = m.exec(self.string[self.col:])
+        if ret and eat:
+                self.col += ret[0].length
+        return ret
+
+    def eol(self):
+        return self.col >= self.string.length
+
+    def sol(self):
+        return self.col == 0
+
+    def eat_space(self):
+        ret = self.match(/^ */, True)
+        return ret and ret[0]
+
+    def peek(self):
+        return self.string.charAt(self.col)
+
+    def eat(self, ch):
+        if not ch:
+            return False
+        _ch = self.string.charAt(self.col)
+        if  _ch == ch:
+            self.col+=1
+            return True
+        return False
+
+    def next(self):
+        _ch = self.string.charAt(self.col)
+        if  _ch:
+            self.col+=1
+            return _ch
+        return None
+
+    def eat_to_end(self):
+        ret = self.string[self.col:]
+        self.col = self.string.length
+        return ret
+
+    def rest(self):
+        return self.src[self.pos():]
+
+class Parser:
+    def __init__(self):
+        self.src = None
+        self.indent_len = None
+        self.cur_level = 0
+        self.stream = None
+        self.chunk_tbl = None
+        self.templ_tbl = None
+        self.var_tbl = None
+        self.compile_requires = None
+
+    def raise_err(self, msg):
+        S= self.stream
+        raise ParserError(msg, S.line, S.col, S.pos(), S.eof())
+
+    def eol_or_comment_expect(self):
+        if not self.stream.match(/^\s*(#.*)?$/, True):
+            self.raise_err('Expected end of the line')
+
+    def eol_expect(self):
+        if not self.stream.match(/^\s*$/, True):
+            self.raise_err('Expected end of the line')
+
+    def expect(self, m, err):
+        if not (ret = self.stream.match(m, True)):
+            self.raise_err('Expected: ' + (err or m))
+        return ret
+
+    def read_string(self, quote, force_strip):
+        S = self.stream
+        if (q = S.match(/^(''''''|""""""|(''(?!')|""(?!")))/, True)):
+            return  q[2] or  ''
+        quote_map = {
+            "'" : RegExp("^('''(?!')|'(?!'))"),
+            '"' : RegExp('^("""(?!")|"(?!"))')
+        }
+        quote = S.match(quote_map[quote], True)[0]
+        if  quote.length == 3:
+            m = /^([^\\']|\\('{1,3}|.)|'{1,2}(?!'))*/
+            strip = True
+        else:
+            strip = force_strip or False
+            m = /^([^\\']|\\('|.))*/
+        if quote[0] != "'":
+            m = RegExp(m.source.replace(/'/g, '"'))
+
+        ret = []
+        cur = ''
+        while True:
+            if S.eol():
+                ln = S._next_line()
+                if ln is None:
+                    break
+                if not ln.trim():
+                    S.eat_space()
+                    ret.push(ln)
+                    continue
+            s = S.match(m, True)
+            ret.push(s[0])
+            if not S.eol():
+                break
+        self.expect(quote)
+        ret = ret.join('\n').replace(RegExp('\\\\'+quote, 'g'), quote).replace(RegExp('\\\\\\\\'+quote, 'g'), '\\'+quote)
+        if not strip:
+            ret = quote[0] + ret + quote[0]
+        return ret
+
+    def read_var_def(self):
+        S = self.stream
+        if (q = S.match(/^('|")/)):
+            return self.read_string(q[1])
+        else:
+            return S.eat_to_end()
+
+    def parse_tag(self):
+        def read_attr():
+            ret = {
+                name: None,
+                value: None,
+                type: None
+            }
+            ret.name = self.expect(/^[\w:`~!@#$%^&*\.\-+{[\]}]+/, 'Attr name was expected')[0]
+            if S.match(/^\s*=\s*/, True):
+                if (q = S.match(/^('|")/)):
+                    ret.value = self.read_string(q[1])
+                    ret.type = 'string'
+                elif S.match(/^\$/, True):
+                    ret.value = '$' +  self.expect(/^\w+/, 'variable name')[0]
+                    ret.type = 'var_ref'
+                else:
+                    self.raise_err("Unexpected attribute value (expected 'string' or $variable)")
+            return ret
+
+        ret = {
+            name: None,
+            attrs: []
+        }
+        S = self.stream
+        S.eat_space()
+        ret.name = self.expect(/^[\w\-]+/, 'Invalid tag name')[0]
+        S.eat_space()
+        paren_or_colon = self.expect(/^(\(|:)/, 'Paren or colon was expected')[1]
+        if paren_or_colon == ':':
+            return ret
+        if not S.match(/^\s*\)/, True):
+            def eat_space_comment():
+                S.eat_space()
+                while not S.eof() and ( S.eol() or S.match(/^(\\\s*|#.*)$/, True)):
+                    S.next_line()
+                S.eat_space()
+
+            while not (eof = S.eof()):
+                eat_space_comment()
+                attr = read_attr()
+                if attr.name.startsWith('%'):
+                    ret[attr.name] = attr.value is None ? True : strip_quotes(attr.value)
+                else:
+                    ret.attrs.push(attr)
+                eat_space_comment()
+                comma_or_paren = self.expect(/^\s*(,\s*\)|\)|,)/, 'Paren or comma was expected')[1]
+                if comma_or_paren[-1] == ')':
+                    break
+                elif comma_or_paren[0]== ',':
+                    eat_space_comment()
+                    if S.match(/^\)/, True):
+                        break
+            if eof:
+                self.raise_err('Unexpected EOF')
+        self.expect(/^\s*:/, 'Colon was expected')
+        if not len(ret.attrs):
+            ret.attrs = None
+        return ret
+
+    def read_verbatim(self, re_stop):
+        S = self.stream
+        barier_level = self.cur_level
+        ret = []
+        re_indent = RegExp('^\\s{'+ barier_level * self.indent_len  +'}')
+        #re_indent_stop = RegExp(re_indent.source + re_stop.source)
+        while not (eof = S.eof()):
+            if (empty_line = S.match(/^\s*$/, True)):
+                ret.push(empty_line[0])
+                S._next_line()
+                continue
+            if not S.match(re_indent, True) or \
+                    (re_stop and S.match(re_stop, True)):
+                break
+            ret.push(S.eat_to_end())
+            S._next_line()
+        return ret.join('\n')
+
+    def tokenize(self):
+        S = self.stream
+        start_end = {s: [S.line, S.col, S.pos()], e: None }
+        if S.match(/^\s*#/, True):
+            ret =  {_type: 'comment', value: S.eat_to_end()}
+        elif (q = S.match(/^('|")/)):
+            ret = {_type: 'string', value: self.read_string(q[1])}
+        elif S.match(/^\s*\$/, True):
+            if (var_name = S.match(/^(\w+)\s*=\s*/, True)):
+                ret = {_type: 'var_def', name: '$' + var_name[1],  value: self.read_var_def()}
+            elif (var_name = S.match(/^(\w+)/, True)):
+                ret = {_type: 'var_ref', name: '$' + var_name[1]}
+            else:
+                self.raise_err('Unexpected syntax')
+        elif S.match(/^\s*def\s+/, True):
+            ret = Object.assign({_type: 'def'}, self.parse_tag())
+        elif S.match(/^\s*v-def\s+/, True):
+            ret = Object.assign({_type: 'v-def'}, self.parse_tag())
+        elif S.match(/^\s*\+{3}/, True):
+            ret = {_type: 'beg', value: '+++'}
+        elif S.match(/^\s*---/, True):
+            ret = {_type: 'end', value: '---'}
+        else:
+            ret = Object.assign({_type: 'tag'}, self.parse_tag())
+        start_end.e = [S.line, S.col, S.pos()]
+        ret._pos = start_end
+        return  ret
+
+
+    def dedent(self, node, to_level):
+        while True:
+            if node.scope_level <= to_level:
+                break
+            node = node.parent
+        return node
+
+    def walk_up(self, node, up_level):
+        if up_level == 0:
+            return node
+        up_level = up_level < 0 ?  -up_level : up_level
+        while up_level:
+            node = node.parent
+            up_level -= 1
+        return node
+
+    def parse(self, rml):
+        self.src = rml
+        self.stream = Stream(rml)
+        self._init_indent_len()
+        self.chunk_tbl = {
+            'v-pyj': {
+                '%tag' : 'script',
+                '%verbatim' : True
+            },
+            'v-css': {
+                '%tag' : 'css',
+                '%verbatim' : True
+            }
+        }
+        self.templ_tbl = {}
+        self.var_tbl = {}
+        self.compile_requires = []
+
+        main = parent = {_type: 'main', child_nodes : [], scope_level: 0, scoped_by: 'indent'  }
+        child_nodes  = parent.child_nodes
+        S = self.stream
+        S.next_line()
+
+        def push_scope(node, scoped_by , scope_level):
+            nonlocal child_nodes, parent
+            if self.allow_child(node):
+                if not node.child_nodes:
+                    node.child_nodes = []
+                child_nodes = node.child_nodes
+                if scoped_by:
+                    node.scoped_by = scoped_by
+                    node.scope_level = scope_level
+                parent = node
+            else:
+                self.raise_err('Element `'+ (node.name or node._type) +'` couldn`t have a child')
+
+        while not S.eof():
+            if S.eol():
+                S.next_line()
+            sol = S.sol()
+            if sol:
+                dlt = self.hold_indent()
+                if dlt == 1:
+                    push_scope(node, 'indent', self.cur_level)
+                    chunk = self.chunk_tbl[node.name]
+                    compiler = node['%compiler'] or chunk and chunk['%compiler']
+                    if compiler:
+                        self.compile_requires.push({node: node, compiler: compiler})
+                    if node['%verbatim'] or chunk and chunk['%verbatim']:
+                        node.child_nodes = [self.read_verbatim()]
+                        continue
+                elif dlt < 0 or (dlt == 0 and node and  node._inline):
+                    parent = self.dedent(parent, self.cur_level)
+                    child_nodes = parent.child_nodes
+            S.eat_space()
+            if S.eol():
+                continue
+            token = self.tokenize()
+            token._inline = not sol
+            if token._inline and token._type != 'comment':
+                push_scope(node)
+            if token._type == 'beg':
+                if not sol:
+                    self.raise_err('Unexpected placement of `+++`')
+                self.eol_or_comment_expect()
+                chunk = self.chunk_tbl[node.name]
+                compiler = node['%compiler'] or chunk and chunk['%compiler']
+                if compiler:
+                    self.compile_requires.push({node: node, compiler: compiler})
+                if node['%verbatim'] or chunk and chunk['%verbatim']:
+                    S._next_line()
+                    node.child_nodes = [self.read_verbatim(/^---\s*#*.*$/)]
+                    node.scoped_by = 'beg_end'
+                    node.scope_level = self.cur_level
+                else:
+                    push_scope(node, 'beg_end', self.cur_level)
+            elif token._type == 'end':
+                if not sol or parent.scope_level != self.cur_level:
+                    self.raise_err('Unexpected placement of `---`')
+                if parent.scoped_by != 'beg_end':
+                    self.raise_err('Mismatched end block `---`')
+                parent = self.walk_up(parent, 1)
+                child_nodes = parent.child_nodes
+            elif token._type == 'comment':
+                token.parent = parent
+                if not token._inline:
+                    child_nodes.push(token)
+                    node = token
+                elif node._type == 'tag':
+                    token.parent = node
+                    node.child_nodes = [token]
+                else:
+                    child_nodes.push(token)
+
+            elif token._type == 'string':
+                token.parent = parent
+                child_nodes.push(token)
+                node = token
+            elif token._type == 'def':
+                if not sol:
+                    self.raise_err('`def` block should be at new line')
+                token.parent = parent
+                node = self.chunk_tbl[token.name] = token
+            elif token._type == 'v-def':
+                if not (sol and parent._type == 'main'):
+                    self.raise_err('`v-def` block should be at new line and in the main scope')
+                token.parent = parent
+                node = self.templ_tbl[token.name] = token
+            elif token._type == 'var_def':
+                if not sol:
+                    self.raise_err('Variable definition should be at new line')
+                token.parent = parent
+                node = self.var_tbl[token.name] = token.value
+                node = token
+            elif token._type == 'var_ref':
+                token.parent = parent
+                child_nodes.push(token)
+                node = token
+            elif token._type == 'tag':
+                token.parent = parent
+                child_nodes.push(token)
+                node = token
+            else:
+                self.raise_err('Unexpected syntax')
+        return (main.child_nodes, self.var_tbl, self.chunk_tbl, self.compile_requires, self.templ_tbl)
+
+    def _init_indent_len(self):
+        #ret = /(^ +)\S/m.exec(self.src)
+        #self.indent_len = ret ? len(ret[1]) : 0
+        self.indent_len = 4
+
+    def hold_indent(self):
+        ind_len = self.stream.indent
+        if ind_len % self.indent_len:
+            self.raise_err('Inconsistent indentation')
+        level = ind_len/self.indent_len or 0
+        dlt_level = level - self.cur_level
+        if dlt_level > 1:
+            self.raise_err('Inconsistent indentation')
+        self.cur_level = level
+        return dlt_level
+
+    def allow_child(self, node):
+        if node._type == 'main' or node._type == 'v-def' or (node._type == 'def' and not node['%tag']):
+            return True
+        if node._type == 'tag' and ( not self.chunk_tbl[node.name] or self.chunk_tbl[node.name]['%tag']):
+            return True
+        return False
+
+
+class RML_compiler:
+    def __init__(self, markup, opt):
+        self.markup = markup
+        self.compilers = opt.compilers or {}
+        self.save_v_pyj = opt.save_v_pyj or def(): return;
+
+    def print_attrs(self, attrs, vars, tag_pos, ind):
+        vars = vars or None
+        if not (attrs and (num_attrs = len(attrs))):
+            return ''
+        ret = [' ']
+        pref = not ind or num_attrs <= 5 ? '' : '\n' + ind
+        for  it in attrs:
+            name = it.name
+            val = it.value
+            if vars:
+                name = self.mount_vars(name, vars, tag_pos)
+                val = self.mount_vars(val, vars, tag_pos)
+            ret.push(pref + name)
+            if type(val) == 'String':
+                ret.push('= '+ val)
+        return ret.join(' ') # remove last space
+
+    def mount_vars(self, s, vars_rbl, tag_pos):
+        def replacer(p0, p1, p2):
+            v = vars_rbl[p2] or None
+            if v is None:
+                raise OutputError('No var named `' + p2 + '`', tag_pos)
+            s = p1 + ( vars_rbl[p2] or p2 )
+            return s
+        if not s:
+            return s
+        ret = s.replace(/(^|(?!\\)\W)(\$\w+)/gm, replacer)
+        return ret.replace(/\\\$/g, '$')
+
+    def print_tag(self, tag, ind, vars, chunks, stack):
+        ind = ind or ''
+        vars = vars and isinstance(vars, Object) and  Object.keys(vars).length and vars or None
+        chunks = chunks or None
+        stack = stack or []
+        ret = tag._inline ? '' : ('\n' + ind)
+        if tag._type  == 'comment':
+            return ''
+        if tag._type == 'string':
+            ret += strip_quotes(tag.value)
+            return ret
+        if tag._type == 'var_ref':
+            ret += self.mount_vars(tag.name, vars, tag._pos.s)
+            return ret
+
+        child_inline = tag.child_nodes and tag.child_nodes[0] and tag.child_nodes[0]._inline
+
+        name  = tag.name
+        if vars:
+            name  = self.mount_vars(name, vars,  tag._pos.s)
+        close_tag = {}
+        is_verbatim = tag['%verbatim']
+        if chunks and chunks[name]:
+            if chunks[name]['%tag']:
+                is_alias = True
+                is_verbatim = is_verbatim or chunks[name]['%verbatim']
+            else:
+                is_chunk = True
+
+        if is_chunk:
+            if name in stack:
+                raise OutputError('Circular reference detected in chunk `' + name + '`', tag._pos.s[0], tag._pos.s[1], tag._pos.s[2])
+            stack.push(name)
+            child_nodes = chunks[name].child_nodes
+            ret = []
+            start_content = ''
+            child_ind =  ind
+            close_tag[False] = ''
+            close_tag[True] = ''
+        else:
+            if is_alias:
+                name = chunks[name]['%tag']
+                tag.attrs = attrs_assign(chunks[tag.name].attrs, tag.attrs)
+            child_nodes = tag.child_nodes
+            child_ind =  ind + ( child_inline ? '' :   '    ')
+            start_content = '>'
+            ret = [( tag._inline ? '' : '\n' + ind ) , '<' , name , self.print_attrs(tag.attrs, vars,  tag._pos.s, tag._inline ? None : ind + '    ')]
+            tag_prop = self.markup[name] or self.markup['*']
+            close_meth = None
+            if tag_prop:
+                close_meth = tag_prop.close_meth
+                if not close_meth: #noraml
+                    close_tag[False] = '/>'
+                    close_tag[True] = ( child_inline ? '' : '\n' + ind ) +  '</' + name + '>'
+                elif close_meth == '+': # force separate close
+                    close_tag[False] = '></' + name + '>'
+                    close_tag[True] = ( child_inline ? '' : '\n' + ind ) + '</' + name + '>'
+                elif close_meth == '-':
+                    close_tag[False] = '>'
+                    close_tag[True] = '>'
+            else:
+                raise OutputError('Invalid tag: '  + name )
+
+
+        if child_nodes:
+            # skip comments
+            i=0
+            for t in child_nodes:
+                if t._type != 'comment':
+                    break
+                i+=1
+            child_nodes = child_nodes[i:]
+            has_child = !!len(child_nodes)
+        else:
+            has_child = False
+        if has_child:
+            ret.push(start_content)
+            if is_verbatim:
+                content = child_nodes[0].split('\n')
+                ret.push('\n' + child_ind)
+                ret.push( content.join('\n'+ child_ind))
+            else:
+                for t in child_nodes:
+                    ret.push(self.print_tag(t, child_ind, vars, chunks, stack))
+        ret.push(close_tag[has_child])
+        if is_chunk:
+            stack.pop()
+        #return (ret.join('')).replace(/\\\$/g, '$')
+        return ret.join('')
+
+
+    def pre_compile(self, src):
+        p = Parser()
+        content, vars, chunks, nodes_to_compile, templ_tbl = p.parse(src)
+        out_v_pyj = []
+        # compile v-pyj as first step because it may be imported in html-body
+        v_pyj_tag = content.find(def(it): return it.name=='v-pyj';)
+        if v_pyj_tag and v_pyj_tag.child_nodes and (v_pyj_script = v_pyj_tag.child_nodes[0]):
+            for templ_name in templ_tbl:
+                rml_templ = templ_tbl[templ_name]
+                out_v_pyj.push(templ_name + '= """')
+                for node in rml_templ.child_nodes:
+                    out_v_pyj.push(self.print_tag(node, None, vars, chunks))
+                out_v_pyj.push('\n"""\n\n')
+            # correct lines number of v-pyj for right traceback if compile error
+            templ_str = out_v_pyj.join('')
+            templ_str_len = len(templ_str)
+            templ_str_lines_num = len(templ_str.split('\n'))
+            v_pyj_tag._lines_delta =  -templ_str_lines_num + 2
+            v_pyj_tag._pos_delta =  -templ_str_len
+            out_v_pyj_str = templ_str + v_pyj_script
+
+        v_css_tag = content.find(def(it): return it.name=='v-css';)
+        out_v_css = None
+        if v_css_tag and v_css_tag.child_nodes and (v_css_str = v_css_tag.child_nodes[0]):
+            store_in = None
+            if v_css_tag.attrs and len(v_css_tag.attrs):
+                if v_css_tag.attrs[0].name == 'store_in':
+                    store_in =  strip_quotes(v_css_tag.attrs[0].value)
+                else:
+                    raise OutputError(
+                            'v-css: expected `store_in` instead of ' + v_css_tag.attrs[0].name,
+                            v_css_tag._pos.s)
+            out_v_css = {
+                css: v_css_str,
+                store_in: store_in
+            }
+
+
+        # make ret object
+        ret = {
+            v_css: out_v_css,
+            v_pyj: out_v_pyj_str,
+            nodes_to_compile: nodes_to_compile,
+            raise_err_at: None,
+            compile_v_pyj: None,
+            make_html: None
+        }
+        ret.raise_err_at = def(node, compiler_err):
+            err = type(compiler_err) == 'String' ? Error(compiler_err) : compiler_err
+            node_line = node._pos.s[0] + (node.scoped_by == 'beg_end' ? 1 : 0) - 1
+            indentation =  node.scope_level*p.indent_len
+            err.line = err.line or 0
+            err.pos = (err.pos or 0) + indentation*err.line + node._pos.e[2] + (node._pos_delta or 0)
+            err.line += (node_line + (node._lines_delta or 0))
+            err.col = indentation + (err.col or 0)
+            raise err
+        # for debug in IDE to generate errors with right line/column number
+        ret.compile_v_pyj = def(compiler):
+            if not v_pyj_script:
+                return
+            try:
+                return compiler(ret.v_pyj)
+            except as err:
+                if err.filename: # error in imports
+                    raise err
+                else:
+                    ret.raise_err_at(v_pyj_tag, err)
+        ret.raise_v_pyj_err = def (err):
+            ret.raise_err_at(v_pyj_tag, err)
+
+        ret.make_html = def():
+            out_html = []
+            for tag in content:
+                if  tag.name in ['v-pyj', 'v-css']:
+                    continue
+                out_html.push(self.print_tag(tag, None, vars, chunks))
+            return out_html.join('')
+        return ret
+
+    def compile(self, src):
+        prec = self.pre_compile(src)
+        if prec.v_pyj:
+            self.save_v_pyj(prec.v_pyj)
+        if prec.nodes_to_compile:
+            for it in prec.nodes_to_compile:
+                if (compiler = self.compilers[it.compiler]):
+                    try:
+                        it.node.child_nodes[0] = compiler(it.node.child_nodes[0])
+                    except as err:
+                        prec.raise_err_at(it.node, err)
+                else:
+                    prec.raise_err_at(it.node, Error('Compiler `'+ it.compiler +'` is not set'))
+
+        return prec.make_html()
+
+
+
+
+_rml_test_str_="""
+def RS(%tag = script, %verbatim,  type = "text/js" ):
+$asd = DDDDDD
+def tt():
+    div(d="df dfsdf\\" g"):
+        span(in_tt = 'qq'):
+            RS():
+                'sdfsdfsdsdfsdf sdf '
+                {function();
+                    dsfsdf;
+                    e = /\\$.+/.exec('sdfsdf')
+                }
+                 fsdfsd
+
+!DOCTYPE(html):
+div():
+    tt():
+    RS(some = 'wer1'):
+    span(as = '$asd', g= '\\$event'):
+        ul:
+            li:
+                i(class = 'sdsd'):
+            li:
+
+def qq():
+    div():
+        qq1():
+        # dfsdf
+        'hi from qq-chunk'
+def qq1():
+    #qq1():
+    div():
+        'hi from qq1-chunk'
+    span(name = 'qq1-chunk'):
+        'sdfsdf'
+div:
+    RS:
+        'adasd'
+        'sdasd'
+svg:
+    qq1():
+editable(f = 'sdfsdf', @click = 'sdfdf()'):
+RS:
+
+"""
+
+def load_markup(markup):
+    # start scanning the rules
+    html_tags = {}
+    def read_line(ln):
+        r = /^<\s*([^\s]+)\s*>\s*([+-]?)/.exec(ln)
+        return {'tag': r[1], 'close_meth': r[2]}
+    for line in markup.split('\n'):
+        # remove comments:
+        line = line.split('#')[0].trimRight()
+        # ignore blank lines
+        if not line.trim():
+            continue
+        else:
+            tag = read_line(line)
+            html_tags[tag.tag] = tag
+    return html_tags
+
+import asset.html_ml as html_ml
+
+def compile(rml_s, opt):
+    markup = html_ml.markup()
+    compiler = RML_compiler(load_markup(markup), opt)
+    ret = compiler.compile(rml_s)
+    return ret
+
+def pre_compile(rml_s):
+    markup = html_ml.markup()
+    compiler = RML_compiler(load_markup(markup), {})
+    ret = compiler.pre_compile(rml_s)
+    return ret
+
+
+def main():
+    return compile(_rml_test_str_)
+
+if __name__ == '__main__':
+    main()

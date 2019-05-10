@@ -1,0 +1,422 @@
+import asset.fs_path as fs_path
+
+class FS_local_keeper:
+    def __init__(self, name, zip):
+        self.name = name
+        self.zip = zip
+
+    def save(self, fs_obj):
+        def prom(ok, err):
+            def store_handler(data):
+                window.localStorage.setItem(self.name, data)
+                ok('done')
+            self.zip.file('fs_store', fs_obj.dumps())
+            self.zip.generateAsync({
+                type: "string",
+                compression: "DEFLATE",
+                compressionOptions: { level: 9}
+            }).then(store_handler)
+        return new Promise(prom)
+
+    def load(self, fs_obj):
+        def prom(ok, err):
+            def reader(zip):
+                zip.file('fs_store').async('string').then(def(s):
+                    fs_obj.loads(s)
+                    ok('done')
+                )
+            fzip = window.localStorage.getItem(self.name)
+            if fzip:
+                self.zip.loadAsync(fzip).then(reader)
+            else:
+                err()
+        return new Promise(prom)
+
+
+class FS:
+    FILE = 'file'
+    DIR = 'dir'
+    def __init__(self):
+        self.files = {}
+        self.dirs = {}
+        self.dirs[0] = {id:0,  name: '', parent: None,  content: []}
+        self.last_id = 0
+        self.cwd_id = 0
+        self.map_type = {}
+        self._reset_map_type_()
+        self._listeners = {
+         write_file: [],
+         del_file: []
+        }
+        self.fs_path = fs_path
+    def  _doubles_in_dir_content(self):
+        errors = []
+        for dir_id in self.dirs:
+            dir = self.dirs[dir_id]
+            tmp = {}
+            for it_id in dir.content:
+                if tmp[it_id]:  errors.push({dir_id: dir_id});
+                tmp[it_id] = True
+        return errors.length ? errors : None
+
+    def  _consistency_errors(self):
+        errors = []
+        for dir_id in self.dirs:
+            dir = self.dirs[dir_id]
+            for it_id in dir.content:
+                it = self.get_info(it_id)
+                if it.parent != dir_id:
+                    errors.push({dir_id: dir_id, it_id: it_id})
+        for f_id in self.files:
+            f = self.files[f_id]
+            parent_dir = self.dirs[f.parent]
+            if not f_id in parent_dir.content:
+                errors.push({dir_id: parent_dir.id, f_id: f_id})
+        return errors.length ? errors : None
+
+    def _reset_map_type_(self):
+        self.map_type[self.FILE] = self.files
+        self.map_type[self.DIR] = self.dirs
+
+    def loads(self, s):
+        obj = s
+        if type(obj) != 'String':
+            obj = JSON.stringify(obj)
+        obj = JSON.parse(obj)
+        self.files = obj.files
+        self.dirs = obj.dirs
+        self.last_id = obj.last_id
+        self._reset_map_type_()
+
+    def dumps(self):
+        data = {
+            files: self.files,
+            dirs: self.dirs,
+            last_id : self.last_id
+        }
+        return JSON.stringify(data)
+
+    def _create_id(self):
+        id = (new Date()).valueOf()
+        while id <= self.last_id:
+            id = (new Date()).valueOf()
+        self.last_id = id
+        return id.toString()
+
+    def _name_to_id(self, name, parent_id, scope):
+        f_d = JS('typeof scope') is 'string' ? self[scope] : scope
+        for id in self.dirs[parent_id].content:
+            if f_d[id] and f_d[id].name == name:
+                return id
+        return False
+
+    def _create_zombie_dir(self, name, parent_id):
+        parent_id = parent_id.toString()
+        parent_dir = self.dirs[parent_id]
+        if not parent_dir:
+            raise Error('Bad parent_id: ' + parent_id)
+        if self._name_to_id(name, parent_id, 'dirs'):
+            raise Error('Dir already exists: ' + name)
+        dir_id = self._create_id()
+        self.dirs[dir_id] = {id:dir_id,  name: name, parent: parent_id, content: []}
+        return dir_id
+
+    def is_valid_name(self, name):
+        #return /^(\.\w|\w)(\w|\.)*/.test(name)
+        return fs_path.is_valid_name(name)
+
+    def to_arr(self, path):
+        return fs_path.to_arr(path)
+
+    def get_type(self, id):
+        if self.files[id]:
+            return self.FILE
+        if self.dirs[id]:
+            return self.DIR
+        raise Error('Bad id: ' + id)
+
+    def create_dir(self, name, parent_id):
+        if parent_id is undefined:
+            ps = fs_path.path_split(name)
+            parent_id = self.id_by_path(ps.dir)
+            name = ps.tail
+        else:
+            parent_id = parent_id.toString()
+        if not self.dirs[parent_id]: raise Error('Bad dir_id: ' + parent_id);
+        dir_id = self._create_zombie_dir(name, parent_id)
+        parent_dir = self.dirs[parent_id]
+        parent_dir.content.push(dir_id)
+        return dir_id
+
+    def create_path(self, path):
+        dirs = self.to_arr(path)
+        if not dirs or dirs[0] != '': # not abs path
+            raise Error('bad path: '+ path)
+            return
+        dirs = dirs[1:]    # remove '' (root dir)
+        i=0
+        prnt_id =  '0'
+        for dir_name in dirs:
+            dir_id = self._name_to_id(dir_name, prnt_id, 'dirs')
+            if dir_id:
+                i+=1
+                prnt_id = dir_id
+            else:
+                break
+        while dirs[i]:
+            dir_id = self._create_id()
+            self.dirs[dir_id] = {id:dir_id,  name: dirs[i], parent: prnt_id, content: []}
+            self.dirs[prnt_id].content.push(dir_id)
+            prnt_id = dir_id
+            i+=1
+        return  dir_id
+
+    def create_file(self, name, dir_id, content):
+        if dir_id is undefined:
+            ps = fs_path.path_split(name)
+            dir_id = self.id_by_path(ps.dir)
+            name = ps.fname
+        else:
+            dir_id = dir_id.toString()
+        #dir_id = path ? self.create_path(path) : self.cwd_id
+        if not self.dirs[dir_id]: raise Error('Bad dir_id: ' + dir_id);
+        if self._name_to_id(name, dir_id, 'files'):  raise Error('File already exists: ' + name);
+        id = self._create_id()
+        dt = (new Date()).valueOf()
+        self.files[id] = {
+            id: id,
+            name: name,
+            parent: dir_id,
+            content: '',
+            ctime: dt,
+            mtime: dt,
+        }
+        self.dirs[dir_id].content.push(id)
+        if content != undefined:
+            self.write_file(id, content)
+        return id
+
+    def del_any(self, id):
+        if self.dirs[id]:
+            self.del_dir(id)
+        elif self.files[id]:
+            self.del_file(id)
+        else:
+            raise Error('Bad id: ' + id)
+
+    def del_file(self, id):
+        f = self.files[id]
+        if not f:
+            raise Error('Bad file_id: ' + id)
+
+        for listener in self._listeners['del_file']:
+            listener(id)
+        pdir = self.dirs[f.parent]
+        idx = pdir.content.indexOf(id)
+        pdir.content.splice(idx, 1)
+        del self.files[id]
+
+    def del_dir(self, id, force_del):
+        d = self.dirs[id]
+        if not d:
+            raise Error('Bad dir_id: ' + id)
+        elif d.content.length and not force_del:
+            raise Error('Dir is not empty: ' + id)
+        for child_id in d.content[:]:
+            if self.files[child_id]:
+                self.del_file(child_id)
+            else:
+                self.del_dir(child_id, force_del)
+        pdir = self.dirs[d.parent]
+        idx = pdir.content.indexOf(id)
+        pdir.content.splice(idx, 1)
+        del self.dirs[id]
+
+
+    def copy_file(self, src, dst):
+        src = self.files[src]
+        dst = self.dirs[dst]
+        for d in [src, dst]:
+            if not d: raise Error('Bad dir_id: ' + id);
+        f_id = self.create_file(src.name, dst.id)
+        self.write_file(f_id, src.content, src.mtime)
+        return f_id
+
+    def copy_dir(self, src, dst):
+        src = self.dirs[src]
+        dst = self.dirs[dst]
+        for d in [src, dst]:
+            if not d: raise Error('Bad dir_id: ' + id);
+        src_content = src.content[:]
+        dir_id = self._create_zombie_dir(src.name, dst.id)
+        for id in src_content:
+            if self.get_type(id) == self.DIR:
+                self.copy_dir(id, dir_id)
+            else:
+                self.copy_file(id, dir_id)
+        dst.content.push(dir_id)
+        return dir_id
+
+    def copy_any(self, src, dst):
+        if self.files[src]:
+            return self.copy_file(src, dst)
+        elif self.dirs[src]:
+            return self.copy_dir(src, dst)
+        raise Error('Bad src_id: ' + id);
+
+    def  move(self, id, dst_dir_id):
+        dst_dir = self.dirs[dst_dir_id]
+        if not dst_dir:
+            raise Error('Bad dst_dir_id: ' + dst_dir_id)
+        it = self.get_info(id, True)
+        if self._name_to_id(it.name, dst_dir_id, self.map_type[it.type]):
+            raise Error('Dir or file already exists in dst_dir: ' + it.name)
+        # check for recursive
+        if it.type == self.DIR:
+            up_dir_id = dst_dir.id
+            while up_dir_id:
+                if up_dir_id == id:
+                    raise Error('Can`t move dir into its child')
+                up_dir_id = self.dirs[up_dir_id].parent
+        cur_parent_dir = self.dirs[it.parent]
+        idx = cur_parent_dir.content.indexOf(it.id)
+        if  idx == -1:
+            raise Error('Unexpected error')
+        cur_parent_dir.content.splice(idx,1)
+        dst_dir.content.push(it.id)
+        it.obj.parent = dst_dir.id
+
+    def rename(self, id, new_name):
+        it = self.get_info(id, True)
+        if self._name_to_id(new_name,  it.parent, self.map_type[it.type]):
+            raise Error('Dir or file already exists in dst_dir: ' + it.name)
+        it.obj.name = new_name
+
+    def get_info(self, id, with_obj):
+        type = self.get_type(id)
+        obj = self.map_type[type][id]
+        if not obj:
+            raise Error('Bad id: ' + id)
+        ret = {
+            id : id,
+            name: obj.name,
+            parent: obj.parent,
+            type: type,
+            mtime : obj.mtime,
+            ctime : obj.ctime
+        }
+        if type == self.FILE:
+            ret.md5_hash = obj.md5_hash
+        if with_obj: ret.obj = obj;
+        return ret
+
+    def write_file(self, fid, content, mtime):
+        if not (f = self.files[fid]):
+            raise Error('Bad id: ' + fid)
+        f.content = content
+        f.mtime = mtime or (new Date()).valueOf()
+        for listener in self._listeners['write_file']:
+            listener(fid)
+
+    def on(self, event, listener):
+        if not self._listeners[event]:
+            raise Error('unknown event: ' + event)
+        self._listeners[event].push(listener)
+        return def(): self.off(event, listener);
+
+    def off(self, event, listener):
+        if not (lst = self._listeners[event]):
+            raise Error('unknown event: ' + event)
+        idx = lst.indexOf(listener)
+        if idx != -1:
+            lst.splice(idx, 1)
+
+
+
+#-----------------------------------------------------------------
+
+    def get_file_path(self, fid):
+        f = self.files[fid]
+        if not f:
+            raise Error('Bad file_id: ' + fid)
+        parent = self.dirs[f.parent]
+        ret = []
+        while parent:
+            ret.push({id: parent.id, name: parent.name})
+            parent = self.dirs[parent.parent]
+        ret.reverse()
+        return ret
+
+    def list_dir(self, dir_id):
+        if not self.dirs[dir_id]:
+            raise Error('Bad dir_id: ' + dir_id)
+        ret = []
+        for id in self.dirs[dir_id].content:
+            ret.push(id)
+        return ret
+
+    def path_arr_resolve(self, arr):
+        return fs_path.path_arr_resolve(arr)
+
+    def path_join(self):
+        return fs_path.path_join.apply(None, arguments)
+
+
+    def id_by_path(self, path):
+        def find_id(name, parent_id):
+            for id in self.dirs[parent_id].content:
+                it = self.dirs[id] or self.files[id]
+                if it.name == name:
+                    return id
+            return False
+        if not path:
+            raise Error('Unexpected path ' + path)
+        arr_pth = self.to_arr(path)
+        if not arr_pth or not arr_pth[0] in ['', 'root']: # not abs path
+            raise Error('bad path: '+ path)
+        if not arr_pth[1]:
+            return 0
+        arr_pth = arr_pth[1:] # remove '' (root dir)
+        prnt_id =  0
+        dir_id = 0
+        not_found = False
+        for name in arr_pth:
+            id = find_id(name, prnt_id)
+            if id:
+                prnt_id = id
+            else:
+                not_found = True
+                break
+        if not_found:
+            return None
+        return id
+
+
+    def path_by_id(self, id, root_alias):
+        root_alias = root_alias or ''
+        ret = {
+            ids: [],
+            infos: [],
+            _path: [],
+            path: '',
+        }
+        id = id.toString()
+        #if id == '0': return ['0'];
+        ret.ids.push(id)
+        ret.infos.push(self.get_info(id))
+        ret._path.push(ret.infos[0].name)
+        parent_id = ret.infos[0].parent
+        while parent_id:
+            ret.ids.push(parent_id)
+            parent_info = self.get_info(parent_id)
+            ret.infos.push(parent_info)
+            ret._path.push(parent_info.name)
+            parent_id = self.dirs[parent_id].parent
+        ret.ids.reverse()
+        ret.infos.reverse()
+        ret._path.reverse()
+        if root_alias:
+            ret.infos[0].name = root_alias
+            ret._path[0] = root_alias
+        ret.path = ret._path.join('/')
+        return ret

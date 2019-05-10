@@ -1,0 +1,244 @@
+from asset.rs_vue import V_collector, RS_store, RS_state_api
+from asset.common import asyncer
+from asset.fs import FS
+from asset.vuepy_compiler import vuepy_compile, rs_compile
+import asset.vuepy_output as vuepy_output
+import .editor, .explorer
+import api.server as server
+import app_menu
+
+def default_state():
+    ret = {
+        ctask: None,
+        flash: {msg:'Hi', status:'', component: None, cargs: None},
+        is_busy: True,
+        menus: app_menu.get_factory().default(),
+        w2p_app: None,
+        w2p_apps_list: None,
+        get_fs: None,
+        get_CM: None,
+        show_explorer: False,
+        compile_error: None,
+        modal_state: {
+            is_active: False,
+            inner_component: None,
+            inner_args: None,
+            promise: None,
+            promise_ok: None,
+        }
+    }
+    return ret
+
+vc = V_collector()
+class State(RS_state_api):
+    def __init__(self, vue,  getter_factory, state):
+        super(vc, vue, state or default_state())
+        self.vm.imports = {
+            #is_logged_in: getter_factory('/user.is_logged_in')
+        }
+
+    @vc.mutation
+    def set_modal_inner(self, inner, args):
+        self.state.modal_state.inner_component = inner
+        self.state.modal_state.inner_args = args
+
+    @vc.mutation
+    def compile_error(self, err):
+        self.state.compile_error = err
+
+    @vc.mutation
+    def set_modal_promise(self, p):
+        self.state.modal_state.promise = p
+
+    @vc.mutation
+    def set_modal_promise_ok(self, ok):
+        self.state.modal_state.promise_ok = ok
+
+    @vc.mutation
+    def toggle_modal(self, onoff):
+        onoff = onoff is undefined ? !self.state.modal_state.is_active: onoff
+        self.state.modal_state.is_active = onoff
+
+    @vc.mutation
+    def toggle_busy(self, onoff):
+        onoff = onoff is undefined ? !self.state.is_busy: onoff
+        self.state.is_busy = onoff
+
+    @vc.mutation
+    def toggle_explorer(self, onoff):
+        onoff = onoff is undefined ? !self.state.show_explorer : onoff
+        self.state.show_explorer = onoff
+
+    @vc.mutation
+    def set_w2p_app(self, w2p_app):
+        self.state.w2p_app = w2p_app
+
+    @vc.mutation
+    def flash(self, msg, status):
+        if type(msg) is 'String':
+            self.state.flash.msg = msg
+            self.state.flash.component = None
+            self.state.flash.cargs = None
+        else:
+            self.state.flash.component = msg.component
+            self.state.flash.cargs = msg.cargs
+            self.state.flash.msg = None
+        self.state.flash.status = status
+
+class Store(RS_store):
+    def __init__(self, rs_req):
+        #self.vue
+        self.state_api = State(self.vue, self.getter_factory.bind(self))
+        self.actions = vc._actions
+
+        # api
+        self_app = window.location.pathname.split('/',2)[1]
+        self.api = {}
+        self.api.server = server.Server(rs_req.get('axios.min'), '/' + self_app, self.$bus)
+        self.api.fs = FS()
+        self.api.CM = rs_req.get('codemirror/lib/codemirror')
+        self.state_api.state.get_fs = def(): return self.api.fs;
+        self.state_api.state.get_CM = def(): return self.api.CM;
+
+        # modules
+        self.mount_module(editor.Store(self), 'editor')
+        self.mount_module(explorer.Store(self), 'explorer')
+        fs_refresher =  def():
+                     self.state_api.state.get_fs = def(): return self.api.fs;
+        self.$on('fs_restored',fs_refresher)
+        self.$on('fs_changed',fs_refresher)
+
+        self.state_api.vm.$watch('state.show_explorer', def(n,o):
+                                     if not n:
+                                         self.commit('/explorer.save_as', None)
+        )
+
+        def process_file(cmd, fid):
+            fs = self.api.fs
+            fdata = fs.get_info(fid, True)
+            fdata.path = fs.path_by_id(fid).path
+            fdata.content = fdata.obj.content
+            del fdata.obj
+            fdata.w2p_app = self.get('w2p_app')
+            self.api.server.default.post(cmd, {fdata: fdata}) \
+              .then( def(resp):
+                    print('server_resp: ', resp.data)
+                    if cmd is 'write_file' and resp.data.md5_hash and not resp.data.error:
+                        fs.files[fid].md5_hash = resp.data.md5_hash
+                    if (e = resp.data.error):
+                        self.flash('Server error: ' + e)
+              )
+
+        self.api.fs.on('write_file', def(fid): process_file('write_file', fid);)
+        self.api.fs.on('del_file', def(fid): process_file('del_file', fid);)
+
+    @vc.action
+    @asyncer
+    def w2p_apps_list(self):
+        self.state_api.state.w2p_apps_list = (yield self.api.server.default.get('list_apps', [])).data
+
+    # shortcut for flash
+    def flash(self, *args):
+        self.commit('flash', *args)
+        self.$emit('flash', *args)
+
+    @vc.action
+    @asyncer
+    def menu_click(self, it):
+        is_cmd = /^#cmd:(.*)$/
+        if not it.href or not (cmd = is_cmd.exec(it.href)):
+            return
+        cmd = cmd[1]
+        adoc_num = self.get('/editor.active_doc_num')
+        if cmd is 'toggle_explorer':
+            self.commit('toggle_explorer')
+        elif cmd is 'select_app':
+            self.dispatch('select_app')
+        elif cmd is 'compile':
+            if adoc_num:
+                self.dispatch('/editor.compile_active_doc')
+        elif cmd is 'save':
+            if adoc_num:
+                self.dispatch('/editor.save', adoc_num)
+                self.flash('Done!', 'ok')
+        elif cmd is 'save_all_close':
+            yield self.dispatch('/editor.save_all')
+            yield self.dispatch('/editor.close_all')
+        elif cmd is 'close_all':
+            self.dispatch('/editor.close_all')
+    @vc.action
+    @asyncer
+    def load_fs_from_srv(self, w2p_app):
+        fs = self.api.fs
+        self.commit('toggle_busy', True)
+        try:
+            ret = (yield self.api.server.default.get('get_fs', [w2p_app]))
+        except as err:
+            pass
+        self.dispatch('load_fs', ret.data, w2p_app)
+        self.commit('toggle_busy', False)
+        return ret
+
+    @vc.action
+    def load_fs(self, data, w2p_app):
+        self.api.fs.loads(data)
+        self.commit('set_w2p_app', w2p_app)
+        self.$emit('fs_restored', w2p_app)
+
+    @vc.action
+    def start_modal(self, inner, args):
+        resolver = def(ok, err):
+            self.commit('set_modal_promise_ok', ok)
+        ret = Promise(resolver)
+        self.commit('set_modal_inner', inner, args)
+        self.commit('set_modal_promise', ret)
+        self.commit('toggle_modal', True)
+        return ret
+
+    @vc.action
+    def close_modal(self, *args):
+        ok = self.get('modal_state').promise_ok
+        self.commit('toggle_modal', False)
+        self.commit('set_modal_inner', None, None)
+        self.commit('set_modal_promise', None)
+        self.commit('set_modal_promise_ok', None)
+        ok.apply(None, args)
+
+    @vc.action
+    @asyncer
+    def select_app(self):
+        self.commit('toggle_busy', True)
+        yield self.dispatch('w2p_apps_list')
+        self.commit('toggle_busy', False)
+        app = yield self.dispatch('start_modal', 'app_selector', {app_list: self.get('w2p_apps_list')} )
+        if app!='cancel':
+            self.dispatch('/editor.close_all')
+            self.commit('/explorer.set_dir', 0)
+            return self.dispatch('load_fs_from_srv', app)
+
+    @vc.action
+    def compile(self, compiler, s, fp, compile_only):
+        c_map = {
+            'vuepy':vuepy_compile,
+            'rs':rs_compile,
+            'rapydscript':rs_compile,
+        }
+        if not c_map[compiler]:
+            self.flash('Can`t compile ' + fp, 'warn')
+            return
+        try:
+            compiled = c_map[compiler](s, fp, self.api.fs)
+        except as err:
+            self.commit('compile_error', err)
+            return {error:err}
+        self.commit('compile_error', None)
+        if not compile_only:
+            fs = self.api.fs
+            off = fs.on('write_file', def(fid): self.dispatch('/editor.reload', fid);)
+            vuepy_output.output(compiled, self.api.fs)
+            off()
+            self.$emit('fs_changed')
+        return compiled
+
+if __name__ == '__main__':
+    pass

@@ -1,0 +1,78 @@
+v-def templ:
+    def T(%tag = 'template'):
+    div:
+        div(v-if ='is_busy', class='busy',  style='position: fixed; top:0; left:0; right:0; bottom: 0; z-index:9999'):
+        header(class= "black padded lifted fill", style= 'position:fixed; z-index:1000; top:0'):
+            div(class= "container", id='top_menu'):
+                top_menu(class= "fill middle",
+                         :menus= 'menus',
+                         @click_item= 'menu_click.apply(this, arguments)'):
+                    T(slot-scope = 'props'):
+                        T(v-if = "props.slot_name == 'search'"):
+                            div(style='display:inline-block; margin-right: 5px'):
+                                input(class="l_rounded barinput",  placeholder="Not implemented", style='width:initial'):
+                                div(class='btn barinput gray r_rounded', style='float:right;'):
+                                    i(class='fa fa-search', style='line-height:1.5'):
+                        T(v-else-if= "props.slot_name == 'flash'"):
+                            div(style='position:relative;'):
+                                a(class='black'):
+                                    i(class='fa fa-bullhorn fa-flip-horizontal'):
+                                flash( ref='flash', class='flash'):
+                            ul():
+                                li:
+                                    a(class='hidden'):
+                                    div(class='flash', :class = 'flash.status'):
+                                        template(v-if = 'flash.component'):
+                                            component(:is = 'flash.component', v-bind = 'flash.cargs'):
+                                        template(v-else):
+                                            '${flash.msg}'
+
+        main:
+            div(class= 'main', style= 'margin-top: 50px; min-height:90vh;'):
+                slot:
+            div(v-html = '"&nbsp;"'):
+
+v-pyj:
++++
+from asset.rs_vue import V_collector, RS_vue_n as RS_vue
+
+import components.menu as menu
+import components.flash as flash
+
+def get_app_opt():
+    ret = {}
+    ret.routes={
+        view: 'grid_doc',
+        new: 'span',
+        login: 'login'
+    }
+    return ret
+
+
+vc = V_collector()
+class Layout(RS_vue):
+    def __init__(self):
+        super(vc)
+        self.template = templ
+        self.components = {
+            'top_menu': menu.make(),
+            'flash': flash.make(),
+        }
+        self.map_store = {
+            flash: 'flash',
+            is_busy:  'is_busy',
+            menus: 'menus',
+            menu_click: 'menu_click*',
+        }
+
+    def _init_data(self):
+        app_opt = get_app_opt()
+        ret = {
+            routes: app_opt.routes,
+        }
+        return ret
+
+
+def  make():
+    return Layout()
+---

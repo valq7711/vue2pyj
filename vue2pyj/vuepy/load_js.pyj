@@ -1,0 +1,26 @@
+def load(rs_req):
+    def get_mods():
+        mods = [
+            "codemirror/lib/codemirror.js",
+            "codemirror/mode/python/python.js",
+            "codemirror/mode/javascript/javascript.js",
+            "codemirror/mode/css/css.js",
+            "codemirror/mode/xml/xml.js",
+            "codemirror/mode/htmlmixed/htmlmixed.js",
+            "codemirror/addon/hint/show-hint.js",
+            "codemirror/addon/hint/javascript-hint.js",
+            "codemirror/addon/hint/anyword-hint.js",
+            "codemirror/addon/mode/simple.js",
+            "codemirror/addon/edit/matchbrackets.js",
+            "codemirror/addon/dialog/dialog.js",
+            "codemirror/addon/search/searchcursor.js",
+            "codemirror/addon/search/search.js",
+            "codemirror/keymap/vim.js",
+            "axios.min.js",
+        ]
+        mods  = mods.map(def(it):
+            ret = it.split('.js')[0]
+            return ret;
+        )
+        return  mods
+    return rs_req.load_amd_list(get_mods(),'')

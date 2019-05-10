@@ -1,0 +1,56 @@
+v-css(store_in = 'app0.css'):
+    .app_list{
+        margin: auto;
+        margin-top: 200px;
+        width: 400px;
+        background-color: white;
+        padding: 10px;
+    }
+    .app_list>ul{
+        padding: 15px;
+        max-height: 300px;
+        overflow: auto;
+        margin-bottom: 20px;
+    }
+    .app_list-item>a{
+        width: 100%;
+    }
+
+v-def templ:
+    div(class = 'app_list lifted'):
+        h5: 'Choose app to edit:'
+        ul:
+            li(class = 'app_list-item', v-for  = 'app in app_list'):
+                a(:class = "app == cur_app ? 'orange' : 'gray'", class = 'btn', href = "#",
+                  @click = '$emit("close", app)'
+                ):
+                    '${app}'
+        div(style = 'text-align:right;'):
+            button(type = 'button', class = 'blue', @click = '$emit("close", "cancel")'):'Cancel'
+v-pyj:
++++
+from asset.rs_vue import v_meth, v_computed, v_watch, RS_vue_n, V_collector
+
+vc = V_collector()
+class App_selector(RS_vue_n):
+    def __init__(self):
+        super(vc)
+        self.template = templ
+        self.map_store = { }
+        self.props = {
+            app_list: Array,
+            cur_app: String,
+        }
+
+    def _init_data(self):
+        ret={ }
+        return ret
+
+def make():
+    return App_selector()
+
+def main():
+    pass
+if __name__=='__main__':
+    main()
+---

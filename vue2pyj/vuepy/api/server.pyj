@@ -1,0 +1,66 @@
+
+class Server_w2p_json:
+    def __init__(self, axios, baseURL, bus):
+        self.bus = bus
+        self.baseURL = baseURL
+        self.srv = axios.create({
+              baseURL: baseURL,
+              timeout: 10000,
+              withCredentials: True
+            })
+        self.last_resp =''
+        self.last_error =''
+
+    def call(self, meth, f, args, vars):
+        if meth is 'get':
+            if Array.isArray(args):
+                f = f + '/' + args.join('/')
+                args = undefined
+                if vars and not vars.params:
+                    vars = {params: vars}
+            elif not args.params:
+                args = {params: args}
+
+        ret =  self.srv[meth]('call/json/' + f, args)
+        ret.then(def(r): self.done(r);, def(r): self.raise_error(r);)
+        return ret
+
+    def get(self, f, args):
+        return self.call('get', f, args)
+
+    def post(self, f, args):
+        return self.call('post', f, args)
+
+    def done(self, resp):
+        self.last_resp = resp
+        if self.bus:
+            self.bus.$emit('server', {event: 'done', emitter: self, data: resp.data })
+
+    def raise_error(self, err):
+        self.last_error = err
+        if self.bus:
+            self.bus.$emit('server', {event: 'error', emitter: self, data: err})
+
+class Server:
+    def __init__(self, axios, w2p_app_URL, bus):
+        self.__config__ = {
+            w2p_app_URL : w2p_app_URL,
+            bus : bus
+        }
+
+        #controllers
+        self.default = Server_w2p_json(axios, w2p_app_URL + '/default', bus)
+
+    def logout(self):
+        ret = self.default.get('logout')
+        return ret
+
+    def connect(self):
+        ret = self.default.get('connect')
+        return ret
+
+    def login(self, user_name, pwd):
+        ret = self.default.post('login', {user_name: user_name, pwd: pwd})
+        return ret
+
+

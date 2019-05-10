@@ -1,0 +1,91 @@
+import asset.fs_path as fs_path
+from asset.common import asyncer
+
+def doc_ready(arg_to_pass):
+    p = def(ok, err):
+        document.addEventListener('readystatechange',def():
+            if document.readyState == 'complete':
+                ok(arg_to_pass);
+        )
+    if document.readyState == 'complete':
+        return Promise.resolve(arg_to_pass)
+    return Promise(p)
+
+def prom(f):
+    ret = def():
+        self = this
+        args = Array.prototype.slice.call(arguments)
+        p = def(ok, err):
+            args.push(ok, err)
+            f.apply(self, args)
+        return Promise(p)
+    return ret
+
+class RS_require:
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.modules = {}
+        self.load_stack = []
+        define = window.define = def(req_list, mod):
+            self.define(req_list, mod)
+        define.amd = True
+        self.fs_path = fs_path
+
+    def mount_module(self, as_name, mod):
+        self.modules[as_name]  =  mod
+
+    def define(self, req_list, mod):
+        if type(req_list)=='Function': # no requirements
+            mod = req_list
+            req_list = []
+        mod_name  = self.load_stack[-1].name
+        #print(mod_name, ' requires: ', req_list)
+        ok  = self.load_stack[-1].ok
+        def mount_mod(req_mods):
+            self.load_stack.pop()
+            self.mount_module(mod_name, mod.apply(null, req_mods))
+            ok(self.modules[mod_name])
+        if req_list and req_list.length:
+            self.load_amd_list(req_list, mod_name).then(mount_mod)
+        else:
+            mount_mod([])
+
+
+    @prom
+    def load_amd(self, name, requester, ok, err):
+        is_url = /https?:\/{2}.*/.test(name)
+        if not is_url:
+            if name.startsWith('./'):
+                name = name[2:]
+            if requester:
+                name = fs_path.rel_path_join(requester.split('/')[:-1].join('/'), name)
+        if self.load_stack.find(def(it): return it.name == name;):
+            raise Error('Circular dependency: ' + name +  ' and ' + requester)
+        ret = self.modules[name]
+        if ret:
+            ok(ret)
+        else:
+            s = document.createElement('script')
+            src = name
+            if not is_url:
+                js_root_dir = self.cfg and self.cfg.js_root_dir or ''
+                src = fs_path.rel_path_join(js_root_dir, src)
+            s.src = src + '.js'
+            s.async = True
+            s.onerror = def():
+                err(name)
+            self.load_stack.push({name: name, ok: ok})
+            document.head.appendChild(s) # run define
+
+    @asyncer
+    def load_amd_list(self, mod_lst, requester):
+        ret = []
+        for mod in mod_lst:
+            ret.push(yield self.load_amd(mod, requester))
+        return ret
+
+    def get(self, name):
+        mod = self.modules[name]
+        if not mod:
+            raise Error('Module `' + name + '` is not loaded')
+        return self.modules[name]

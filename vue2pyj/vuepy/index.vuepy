@@ -1,0 +1,109 @@
+def RS(%tag = 'script', %verbatim, %compiler = 'rapydscript', type = "text/javascript" ):
+def style(%tag = 'style', %verbatim):
+def favicon(%tag = 'link',  rel="shortcut icon", type="image/x-icon"):
+
+$css_base = static/css
+$js_base = static/js
+$font_base = static/fonts
+def CSS:
+    link(rel="stylesheet", type="text/css", href= '../$font_base/font-awesome.min.css'):
+    link(rel="stylesheet", type="text/css", href= '../$css_base/stupid.css'):
+    link(rel="stylesheet", type="text/css", href= '../$css_base/app0.css'):
+    link(rel="stylesheet", type="text/css", href= '../$js_base/codemirror/lib/codemirror.css'):
+    link(rel="stylesheet", type="text/css", href= '../$js_base/codemirror/addon/hint/show-hint.css'):
+    link(rel="stylesheet", type="text/css", href= '../$js_base/codemirror/addon/dialog/dialog.css'):
+html:
+    head:
+        meta(charset='utf-8'):
+        favicon(href= '../static/images/favicon.ico'):
+        CSS:
+    title:
+        "vue2pyj"
+    body:
+        div(id = "app"):
+        #--------------- script --------------------
+        RS:
+            import asset.rs_require as rs_require
+            import load_js
+            from asset.common import asyncer
+            window.onbeforeunload = def(): return 'hi!';
+
+            @asyncer
+            def init():
+                js_root_dir= '../static/js/'
+                if window.location.hostname:
+                    js_root_dir= window.location.pathname.split('/', 2).join('/') + '/static/js/'
+                window.rs_req = rs_req = rs_require.RS_require({js_root_dir: js_root_dir}) # exposes define()
+                yield load_js.load(rs_req)
+                yield rs_req.load_amd('index', '')
+                print('Done!!!')
+            init()
+
+
+v-def app_templ:
+    div:
+        layout:
+            div(style = 'width:100%; padding: 0 10px;'):
+                modal:
+                div(v-show = 'show_explorer', class = 'explorer'):
+                    folder_content:
+                editor:
+
+v-pyj:
++++
+import_amd vue as Vue, codemirror/lib/codemirror as CodeMirror, rapydscript_web as rapydscript
+import_amd axios.min as axios
+
+from asset.rs_vue import v_meth, v_computed, v_watch, RS_vue_n as RS_vue, V_collector
+import asset.common as common
+import components.folder_content as folder_content, components.editor as editor,\
+        components.modal as modal, components.confirm as confirm,\
+        components.app_selector as app_selector,components.base_layout as base_layout
+import components.error as cerror
+from store.root import Store
+from api.server import Server
+
+window.srv = Server(axios, '/' + window.location.pathname.split('/')[1])
+Vue.use(Store)
+Vue.options.components = {
+    confirm: confirm.make(),
+    error: cerror.make(),
+    app_selector: app_selector.make(),
+}
+window.store = Store(rs_req)
+
+vc = V_collector()
+class App(RS_vue):
+    def __init__(self):
+        super(vc)
+        self.store = store
+        self.template = app_templ
+        self.map_store = {
+            show_explorer: 'show_explorer',
+            w2p_app: 'w2p_app'
+        }
+        self.components = {
+            folder_content: folder_content.make(),
+            editor: editor.make(),
+            layout: base_layout.make(),
+            modal: modal.make(),
+        }
+
+    def _init_data(self):
+        return {}
+
+    @common.asyncer
+    def mounted(self):
+        yield store.dispatch('w2p_apps_list')
+        store.commit('toggle_busy', False)
+        while not self.w2p_app:
+            app2edit = yield store.dispatch('start_modal', 'app_selector', {app_list: store.get('w2p_apps_list')} )
+            if app2edit!='cancel':
+                yield store.dispatch('load_fs_from_srv', app2edit)
+
+def main():
+    app = App()
+    (new Vue(app)).$mount('#app')
+
+if __name__=='__main__':
+    main()
