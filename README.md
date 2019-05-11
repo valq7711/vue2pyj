@@ -28,7 +28,7 @@ html:
     ...
     body:
         div(id = 'app'):
-
+    script(src = "{{=URL('static', 'js/foo.js')}}"):
 # this is vue template part - will be compiled to html string 
 # and injected into v-pyj part as foo_templ variable (see below)    
 v-def foo_templ:
