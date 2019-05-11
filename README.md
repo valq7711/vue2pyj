@@ -1,5 +1,5 @@
 # vue2pyj
-Experimental webIDE with embedded Rapydscript for web2py (Node.js is not required)
+Experimental webIDE with embedded [Rapydscript](https://github.com/atsepkov/RapydScript) for web2py (Node.js is not required)
 
 ## Installation
 Just unpack vue2pyj.w2p (from [bin](https://github.com/valq7711/vue2pyj/tree/master/bin)) in your web2py/applications folder
