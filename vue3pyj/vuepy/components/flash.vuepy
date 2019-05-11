@@ -1,0 +1,60 @@
+
+v-def templ_flash:
+    div(id='flash', :class='cls'):
+        template(v-if = 'component'):
+            component(:is = 'component', v-bind = 'cargs'):
+        template(v-else):
+            '${msg}'
+
+
+v-pyj:
++++
+from asset.rs_vue import V_collector, RS_vue_n as RS_vue
+
+vc = V_collector()
+class Flash(RS_vue):
+    def __init__(self):
+        super(vc)
+        self.template = templ_flash
+        self.map_store = {
+            bus: '$bus',
+            msg: 'flash.msg',
+            component: 'flash.component',
+            cargs: 'flash.cargs',
+            status: 'flash.status',
+        }
+
+    def _init_data(self):
+        self.hider = None
+        ret = {
+            cls: '',
+        }
+        return ret
+
+    def mounted(self):
+        self.bus.$on('flash', def(): self.show();)
+
+    @vc.meth
+    def show(self):
+        if self.show.hider:
+            clearTimeout(self.show.hider)
+            self.hide()
+            self.$nextTick(def(): self.show();)
+            return
+        self.cls='show ' + (self.status or '')
+        t = 1000
+        if self.msg:
+            t = self.msg.split(/\W+/).length*900
+        self.hider = setTimeout(self.hide, t)
+
+    @vc.meth
+    def hide(self):
+        self.cls = 'hide '+ (self.status or '')
+        self.hider = None
+
+def make():
+    return Flash()
+
+if __name__== '__main__':
+    main()
+---

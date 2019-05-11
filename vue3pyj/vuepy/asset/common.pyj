@@ -1,0 +1,258 @@
+#common.pyj
+def asyncer(fun):
+    ctx = {self:undefined, args: undefined}
+    def pret(ok, err):
+        def inner(f, ret_v):
+            try:
+                f = f or fun.apply(ctx.self, ctx.args)
+                v = f.next(ret_v)
+            except as e:
+                err(e)
+            if !v.done:
+                if isinstance(v.value, Promise):
+                    v.value.then(def(ret_v): inner(f, ret_v);,
+                                 def(e):
+                                     try:
+                                         f.throw(e)
+                                     except as e:
+                                         err(e);
+                    )
+                else:
+                    Promise.resolve(v.value).then(def(ret_v): inner(f, ret_v);)
+            else:
+                ok(v.value)
+        inner()
+    ret =  def():
+        ctx.self = this
+        ctx.args = arguments
+        return Promise(pret);
+    ret.__name__ = fun.__name__ or fun.name
+    return ret
+
+def upload_text():
+    def prom(ok, err):
+        el = document.createElement('input')
+        el.setAttribute('type', 'file')
+        el.setAttribute('multiple', True)
+        el.style.display = 'none'
+        document.body.appendChild(el)
+        ret = []
+        el.onchange  = def():
+            done = el.files.length
+            for i in range(el.files.length):
+                fr = new FileReader()
+                fr._filename_ =  el.files[i].name
+                fr.onloadend = def(s):
+                    nonlocal done
+                    ret.push({name : s.target._filename_, value: s.target.result})
+                    done -= 1
+                    if done == 0:
+                        ok(ret)
+                fr.readAsText(el.files[i])
+        el.click()
+        document.body.removeChild(el)
+    return new Promise(prom)
+
+
+def download(s, filename, mime):
+    blob = new Blob([s], {type : mime or 'text/plain;charset=utf-8;'});
+    el_data = window.URL.createObjectURL(blob);
+    el = document.createElement('a')
+    el.setAttribute('href', el_data)
+    el.setAttribute('download', filename)
+    el.style.display = 'none'
+    document.body.appendChild(el)
+    el.click()
+    document.body.removeChild(el)
+    window.URL.revokeObjectURL(blob)
+
+
+def format_num(format, num):
+    sign_zer_dig = /^%?(\+)?(\d+)?\.(\d+)?f$/.exec(format)
+    if sign_zer_dig:
+        flt_num = parseFloat(num)
+        sign =  flt_num<0 ? '-' : ( (sign_zer_dig[1] and flt_num>0 ) ? '+' : '')
+        flt_num  = Math.abs(flt_num)
+        if sign_zer_dig[3]:
+            flt_num = flt_num.toFixed(parseInt(sign_zer_dig[3]))
+        if sign_zer_dig[2]:
+            zer = parseInt(sign_zer_dig[2])
+            flt_num = flt_num.toString()
+            dot_idx = flt_num.indexOf('.')
+            dot_idx =  dot_idx != -1 ? dot_idx: flt_num.length
+            if dot_idx != -1:
+                if (zer - dot_idx) >0:
+                        flt_num =  '0'.repeat(zer - dot_idx) + flt_num
+        flt_num = sign + flt_num
+        return(flt_num)
+    else:
+        raise Error('bad format: ' + format)
+
+def SF(text, props):
+    def replacer(str_, p):
+        if (t = /^("|')(.+?)("|')$/.exec(p)):
+            return props[t[2]]
+        if (p_chain = p.split('.')) and p_chain.length > 1:
+            return p_chain.reduce(def(it, p): return it[p];, props)
+        return props[p]
+    return text.replace(/\$\{ *(.+?) *\}/g, replacer)
+
+
+def _SF(s, args):
+    #splitter = /(%%)|(%s)|(%\+?\d*\.\d*f)|(%\([a-zA-Z0-9_.]+\)s)|(%\([a-zA-Z0-9_.]+\)\+?\d*\.\d*f)/
+    splitter = /(%%)|(%(?:\([a-zA-Z0-9_.]+\))?(?:(?:s)|(?:\+?\d*\.\d*f)))/
+    arr = s.split(splitter)
+    cntr = 0
+    for i in range(arr.length):
+        if arr[i] and arr[i].startsWith('%'):
+            if arr[i] == '%%':
+                arr[i] = '%'
+            elif arr[i] == '%s':
+                arr[i] = args[cntr]
+                cntr += 1
+            elif arr[i].startsWith('%('):
+                name_format = /%\(([a-zA-Z0-9_.]+)\)(s|\+?\d*\.\d*f)/.exec(arr[i])
+                if name_format[2]=='s':
+                    arr[i] = args[name_format[1]]
+                else:
+                    arr[i] = format_num(name_format[2], args[name_format[1]])
+            elif /%(\+)?(\d+)?\.(\d+)?f/.test(arr[i]):
+                arr[i] = format_num(arr[i], args[cntr])
+                cntr += 1
+            else:
+                raise Error('bad format: ' + arr[i])
+    return(arr.join(''))
+
+
+#--------------------------------------------------------Drag_listener------
+
+class Drag_listener:
+    def __init__(self, catcher, debounce):
+        self.catcher = catcher
+        self.x0 = 0
+        self.y0 = 0
+        self.dx = 0
+        self.dy = 0
+        self.vc = None
+        self.listeners = {}
+        self.debounce = debounce or 50
+
+    def get_mousedn_listener(self):
+        def _inner_(e):
+            self.vc = this
+            self.x0 = e.clientX
+            self.y0 = e.clientY
+            if not self.catcher:
+                self.catcher =  def(what, e, args):
+                                    self.vc.$emit(what, e, args)
+            if not ('move' in self.listeners):
+                self.listeners= {move: self.mousemove(), up: self.mouseup()}
+            listeners =  self.listeners
+            document.addEventListener( 'mousemove', listeners.move, False )
+            document.addEventListener( 'mouseup', listeners.up, False )
+            e.stopPropagation()
+            e.preventDefault()
+            #self.vc.$emit('drag_start', e, {x0: self.x0, y0: self.y0, vc: self.vc})
+            self.catcher('drag_start', e, {x0: self.x0, y0: self.y0, vc: self.vc})
+        self.listeners.dn = _inner_
+        return _inner_
+
+    def mousemove(self):
+        def _inner_(e):
+                e.stopPropagation()
+                e.preventDefault()
+                def process_move():
+                    self.dx = e.clientX - self.x0
+                    self.dy = e.clientY - self.y0
+                    self.catcher('drag_move' , e, {dx: self.dx, dy: self.dy, vc: self.vc});
+                    _inner_.move_fired = True
+                if _inner_.move_fired == undefined:
+                    process_move()
+                elif _inner_.move_fired:
+                    _inner_.move_fired = False
+                    setTimeout(process_move, self.debounce)
+        return _inner_
+
+    def mouseup(self):
+        def _inner_(e):
+            document.removeEventListener( 'mousemove', self.listeners.move)
+            document.removeEventListener( 'mouseup', self.listeners.up)
+            e.stopPropagation()
+            e.preventDefault()
+            self.catcher('drag_stop' , e, {dx: self.dx, dy: self.dy, vc: self.vc})
+        return _inner_
+
+    @staticmethod
+    def get_listener(catcher, debounce):
+        obj = Drag_listener(catcher, debounce)
+        return obj.get_mousedn_listener()
+
+
+
+
+def make_drag_listener(catcher, debounce):
+    ctx = {
+        catcher: catcher,
+        x0 : 0,
+        y0 : 0,
+        dx : 0,
+        dy : 0,
+        vc : None,
+        debounce : debounce or 50,
+        move_done : None
+    }
+
+    def mousemove(e):
+        def process_move():
+            ctx.dx = e.clientX - ctx.x0
+            ctx.dy = e.clientY - ctx.y0
+            ctx.catcher.call(None, 'drag_move', e, {dx: ctx.dx, dy: ctx.dy, vc: ctx.vc})
+            ctx.move_done = True
+
+        e.stopPropagation()
+        e.preventDefault()
+        if ctx.move_done is None:
+            process_move()
+        elif ctx.move_done:
+            ctx.move_done = False
+            setTimeout(process_move, ctx.debounce)
+
+    def mouseup(e):
+        document.removeEventListener( 'mousemove', mousemove)
+        document.removeEventListener( 'mouseup', mouseup)
+        e.stopPropagation()
+        e.preventDefault()
+        ctx.catcher.call(None, 'drag_stop' , e, {dx: ctx.dx, dy: ctx.dy, vc: ctx.vc})
+
+
+    def mousedn(e): # start listen
+        ctx.vc = this
+        ctx.x0 = e.clientX
+        ctx.y0 = e.clientY
+        if not ctx.catcher:
+            ctx.catcher =  def(what, e, args):
+                                ctx.vc.$emit(what, e, args)
+        document.addEventListener( 'mousemove', mousemove, False )
+        document.addEventListener( 'mouseup', mouseup, False )
+        e.stopPropagation()
+        e.preventDefault()
+        ctx.catcher.call(None, 'drag_start', e, {x0: ctx.x0, y0: ctx.y0, vc: ctx.vc})
+    return mousedn
+
+def blur_click_listener(el, cb):
+    ret = {}
+    blur = False
+    def doc_click_cap(e):
+        nonlocal blur
+        blur = True
+        setTimeout(def(): blur and cb(e);, 0)
+    def el_click(e):
+        nonlocal blur
+        blur = False
+    ret.start = def():
+        document.addEventListener('click', doc_click_cap, True)
+        el.addEventListener('click', el_click, True)
+    ret.stop = def():
+        document.removeEventListener('click', doc_click_cap, True)
+        el.removeEventListener('click', el_click, True)
+    return ret

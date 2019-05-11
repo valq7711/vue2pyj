@@ -1,0 +1,467 @@
+MODE_NAME = 'vuepy'
+CodeMirror = None
+
+def reg_mode(CM):
+    nonlocal CodeMirror
+    CodeMirror = CM
+    CM.defineMode(MODE_NAME, def_mode , 'rapydscript')
+
+def arr2hash(arr):
+    ret = {}
+    arr.forEach(def(it): ret[it] = True;)
+    return ret
+
+def wordRegexp(words):
+    return RegExp("^((" + words.join(")|(") + "))\\b")
+
+
+def def_mode(conf, parserConf):
+    ERRORCLASS = "error";
+    punc = parserConf.punctuation or /^[\(\)\[\]\{\}@,:`;\.\\]/
+    stringPrefixes = /^'{3}|"{3}|['"]/i
+
+    tripleOperators = parserConf.tripleOperators or /^((\/\/=)|(>>=)|(<<=)|(\*\*=))/
+    doubleOperators = parserConf.doubleOperators or /^((==)|(!=)|(<=)|(>=)|(<>)|(<<)|(>>)|(\/\/)|(\*\*)|(\+=)|(\-=)|(\*=)|(%=)|(\/=)|(&=)|(\|=)|(\^=))/
+    singleOperators = parserConf.singleOperators or /^[\+\-\*\/%&|\^~<>!=\?]/
+    wordOperators = wordRegexp(["in"])
+
+    identifiers = parserConf.identifiers or RegExp("^[_A-Za-z\$][_A-Za-z0-9\$\-]*")
+
+    indentUnit = conf.indentUnit
+    hangingIndent = parserConf.hangingIndent or indentUnit
+
+    _keywords =  'def v-def v-for v-model v-show ref is key component v-if v-else v-else-if v-html v-text v-on v-bind template slot props'.split(' ')
+    _builtins =  '$event arguments true false null undefined'.split(' ')
+    if parserConf.extra_keywords:
+        _keywords = _keywords.concat(parserConf.extra_keywords)
+
+    if parserConf.extra_builtins:
+        _builtins = _builtins.concat(parserConf.extra_builtins)
+
+    keywords = arr2hash(_keywords)
+    builtins = arr2hash(_builtins)
+
+    CodeMirror.registerHelper("hintWords", MODE_NAME, _keywords.concat(_builtins))
+
+
+
+    class RML_mode:
+        def __init__(self):
+            self.ST_KEYS =  Object.keys(self.start_state())
+
+        def start_state(self, basecolumn):
+            return {
+                tokenize: self.token_base,
+                scopes: [{offset: basecolumn or 0, type: "tag", tag_props: None,  align: None, sub_type: None,
+                          tag_name: None, tag_style: None }],
+                lastStyle: None,
+                lastToken: None,
+                dedent: 0,
+                indent: None,
+                js_str_expect: False,
+                js_str_type: None,
+                def_tags: None,
+                tag_name: None,
+                tag_spec_attrs: None,
+                tag_style: None,
+                local_state: None,
+                local_mode: None
+            }
+
+        def load_state(self, state):
+            Object.assign(self, state)
+
+        def update_state(self, state):
+            self.ST_KEYS.forEach(def(k):
+                state[k] = self[k];
+            )
+
+        def copy_state(self, state):
+            ret = {}
+            self.ST_KEYS.forEach(def(k):
+                v = state[k]
+                if Array.isArray(v):
+                    ret[k] = v[:]
+                elif isinstance(v, Object) and not isinstance(v, Function):
+                    ret[k] = { _ : v[_] for _ in v}
+                else:
+                    ret[k] = v;
+            )
+            if ret.local_mode:
+                ret.local_state = CodeMirror.copyState(ret.local_mode, ret.local_state)
+            return ret
+
+        def dedent_process(self, stream):
+            indented = stream.indentation()
+            while self.scopes[-1].offset > indented:
+                if not /^tag(_inline)?$/.test(self.scopes[-1].type):
+                    return {error: True}
+                self.scopes.pop()
+                while self.scopes[-1].type == "tag_inline":
+                    self.scopes.pop()
+            return {error: self.scopes[-1].offset != indented}
+
+        def token_re(self, stream):
+            escaped = False
+            inSet = False
+            while (next = stream.next()):
+                if not escaped:
+                    if next == "/" and not inSet:
+                        return
+                    if next == "[":
+                        inSet = True
+                    elif inSet and next == "]":
+                        inSet = False
+                escaped = not escaped and next == "\\"
+
+        def  token_base(self, stream):
+            # Handle scope changes
+            sol = stream.sol()
+            if sol:
+                indent = self.indent = stream.indentation()
+                if /^tag(_inline)?$/.test(self.scopes[-1].type)::
+                    scope_offset = self.scopes[-1].offset
+                    if stream.eatSpace():
+                        line_offset = indent
+                        if line_offset > scope_offset:
+                            self.push_scope(stream, "tag")
+                        elif line_offset < scope_offset and self.dedent_process(stream).error:
+                            stream.skipToEnd()
+                            return ERRORCLASS
+                        elif self.scopes[-1].type == 'tag_inline':
+                            while self.scopes[-1].type == "tag_inline":
+                                self.scopes.pop()
+                        return None
+                    else: #zero indentation
+                        style = self.token_baseInner(stream)
+                        if scope_offset > 0 and self.dedent_process(stream).error:
+                            style += " " + ERRORCLASS
+                        return style
+            return self.token_baseInner(stream)
+
+
+        def token_baseInner(self, stream):
+            if stream.eatSpace():
+                return None
+
+            ch = stream.peek()
+
+            # Handle Comments
+            if ch == "#":
+                stream.skipToEnd()
+                return "comment"
+
+            # Handle Number Literals
+            if stream.match(/^[0-9\.]/, False):
+                # Floats
+                if stream.match(/^\d*\.\d+(e[\+\-]?\d+)?/i) \
+                        or stream.match(/^\d+\.\d*/) \
+                        or stream.match(/^\.\d+/):
+                    stream.eat(/J/i) # Float literals may be "imaginary"
+                    return "number"
+
+                # Integers
+                if stream.match( /^0x[0-9a-f]+/i ) \
+                        or stream.match(/^0b[01]+L?/i) \
+                        or stream.match(/^0o[0-7]+L?/i) \
+                        or stream.match(/^[0-9]\d*(e[\+\-]?\d+)?(L|J)?/i): # Decimal, (L|J) - Long or "imaginary"
+                    return "number"
+
+            # Handle Strings
+            if (quote = stream.match(stringPrefixes)):
+                quote = quote[0]
+                if self.js_str_expect:
+                    self.js_str_expect = False
+                    if self.lastToken != '=':
+                        return ERRORCLASS
+                    self.js_str_type = quote
+                    self.push_scope(stream, quote)
+                    return 'punctuation js_string_qte'
+                elif self.scopes[-1].type is quote:
+                    self.scopes.pop()
+                    self.js_str_type = None
+                    return 'punctuation js_string_qte'
+                else:
+                    if self.js_str_type is quote: # the same quote in nested  brakets scope
+                        return  ERRORCLASS
+                    self.tokenize = self.token_string_factory(stream.current())
+                    return self.tokenize(stream)
+
+            # Handle triple, double and word operators
+            if stream.match(tripleOperators) or stream.match(doubleOperators) \
+                    or stream.match(wordOperators):
+                return "operator"
+
+            # may be regexp
+            if stream.eat('/'):
+                if not self.lastToken or self.lastStyle == 'operator' \
+                        or  /^([\[{\(:=,'"]|in)$/.test(self.lastToken):
+                    self.token_re(stream)
+                    stream.match(/^\b(([gimyu])(?![gimyu]*\2))+\b/)
+                    return "string-2"
+                else:
+                    return "operator"
+
+            if stream.match(singleOperators):
+                return "operator"
+
+            if stream.match(punc):
+                return "punctuation"
+
+            if (w = stream.match(identifiers)):
+                w = w[0]
+                if keywords[w]:
+                    return "keyword"
+                if builtins[w]:
+                    return "builtin"
+                if /^(this)\b/.test(w):
+                    return "variable-2"
+                else:
+                    if self.scopes[-1].type.startsWith('tag'):
+                        return self.lastToken == 'def' ? "def" : "tag"
+                    if self.scopes[-1].sub_type == 'attr':
+                        return 'attribute'
+                    return "variable"
+
+            # Handle non-detected items
+            stream.next()
+            return ERRORCLASS
+
+        def token_string_factory(self, delimiter):
+            singleline = delimiter.length == 1
+            OUTCLASS = "string"
+            def token_string(stream):
+                while not stream.eol():
+                    stream.eatWhile(/[^'"\\]/)
+                    if stream.eat("\\"):
+                        stream.next()
+                        if singleline and stream.eol():
+                            return OUTCLASS
+                    elif stream.match(delimiter):
+                        self.tokenize = self.token_base
+                        return OUTCLASS
+                    else:
+                        stream.eat(/['"]/)
+                if singleline:
+                    if parserConf.singleLineStringErrors:
+                        return ERRORCLASS
+                    else:
+                        self.tokenize = self.token_base
+                return OUTCLASS
+
+            token_string.isString = True
+            return token_string
+
+
+        def push_scope(self, stream, type):
+            offset = 0
+            align = None
+            sub_type = None
+            tag_props = None
+            tag_name = None
+            tag_style = None
+            if type == 'tag':
+                while self.scopes[-1].type != "tag":
+                    self.scopes.pop()
+                offset = self.scopes[-1].offset + indentUnit
+                if self.tag_spec_attrs:
+                    tag_props = self.tag_spec_attrs
+                    self.tag_spec_attrs = None
+                tag_name = self.tag_name
+                tag_style = self.tag_style
+            elif type == 'tag_inline':
+                while not self.scopes[-1].type.startsWith("tag"):
+                    self.scopes.pop()
+                offset = self.scopes[-1].offset
+            elif /^('|")/.test(type): # js-string
+                pass
+            elif type.endsWith('---'):
+                offset = self.scopes[-1].offset
+            else: # brakets
+                if not stream.match(/^(\s|#.*)*$/, False):
+                    align = stream.column() + 1
+                offset = self.scopes[-1].offset + hangingIndent
+                sub_type = self.scopes[-1].type.startsWith('tag') ? 'attr' : None
+            self.scopes.push({offset: offset,
+                              type: type,
+                              align: align,
+                              tag_props: tag_props,
+                              sub_type: sub_type,
+                              tag_name: tag_name,
+                              tag_style: tag_style})
+
+        def token_lexer(self, stream):
+            #self.tag_name = None
+            #self.tag_style = None
+            style = self.tokenize(stream)
+            current = stream.current()
+
+            # Handle '.' connected identifiers
+            if current == ".":
+                style = stream.match(identifiers, False) ? None : ERRORCLASS
+                if style == None and self.lastStyle == "meta":
+                    # Apply 'meta' style to '.' connected identifiers when
+                    # appropriate.
+                    style = "meta"
+                return style
+
+            # Handle v-events
+            if current == "@":
+                self.js_str_expect = True
+                return stream.match(identifiers, False) ? "meta" : ERRORCLASS
+
+            if (style == "variable" or style == "builtin") \
+                    and self.lastStyle == "meta":
+                style = "meta"
+
+            # scopes
+            scope = self.scopes[-1]
+            if scope.type.startsWith('tag'):
+                if style == 'def' or style == 'tag':
+                    self.tag_name = current
+                    self.tag_style = style
+                    if style == 'tag' and (def_tag_attrs = self.def_tags ? self.def_tags[current] : None):
+                        self.tag_spec_attrs = Object.assign({}, def_tag_attrs)
+                    if self.tag_name in ['v-pyj', 'v-css']:
+                        style = 'keyword'
+                elif current == ":": # start new `tag` scope
+                    if stream.match(/^(\s|#.*)*$/ ,False):
+                        self.push_scope(stream, "tag")
+                    else:
+                        self.push_scope(stream, "tag_inline")
+
+            # Handle brakets scope start/end
+            elif scope.sub_type == 'attr':
+                if current == ":" and ( /^(,|\(|v-bind)$/.test(self.lastToken))  \
+                        or  /^(v-for|v-if|v-show|v-else-if)$/.test(self.lastToken):
+                    self.js_str_expect = True
+                elif style == 'attribute' and (self.lastToken == '%' or current == 'type'):
+                    re_attr = /^\s*=\s*('|")([^'"]+)\1/
+                    attr_value = stream.match(re_attr , False)
+                    attr_value = attr_value ? attr_value[2] : True
+                    if self.tag_style == 'def':
+                        if not self.def_tags:
+                            self.def_tags = {}
+                        if not self.def_tags[self.tag_name]:
+                            self.def_tags[self.tag_name] = {}
+                        self.def_tags[self.tag_name][current] = attr_value
+                    else:
+                        self.tag_spec_attrs = self.tag_spec_attrs or {}
+                        self.tag_spec_attrs[current] = attr_value
+            if style and style.startsWith('punctuation'):
+                delimiter_index = current.length == 1 ? "[({".indexOf(current) : -1
+                if delimiter_index != -1:
+                    self.push_scope(stream, "])}"[delimiter_index])
+                else:
+                    delimiter_index = "])}".indexOf(current)
+                    if delimiter_index != -1:
+                        if self.scopes[-1].type == current:
+                            self.scopes.pop()
+                        else:
+                            return ERRORCLASS
+            return style
+
+
+
+
+    rml_mode = RML_mode()
+
+    def start_state(basecolumn):
+        return rml_mode.start_state(basecolumn)
+
+    def token(stream, state):
+        scope = state.scopes[-1]
+        if stream.sol():
+            #ignore blank lines
+            if stream.match(/^\s*$/):
+                return None
+
+            def get_mode():
+                if scope.tag_name  == 'v-pyj' \
+                        or (scope.type  == 'tag' \
+                            and scope.tag_props \
+                            and scope.tag_props.compiler):
+                    return 'rapydscript'
+                if  scope.tag_name in ['v-css', 'style']:
+                    return 'css'
+                if  scope.tag_name == 'script' \
+                        or (scope.type  == 'tag' \
+                            and scope.tag_props \
+                            and scope.tag_props.type == 'text/javascript'):
+                    return 'javascript'
+
+            r = None
+            if not (local_state = state.local_state) and (mode_name = get_mode()):
+                if stream.indentation() >= scope.offset \
+                        or scope.offset-indentUnit == stream.indentation() and (r = stream.match(/^(\s*)\+{3}(\s|#.*)*$/)):
+                    mode = CodeMirror.getMode(conf, mode_name)
+                    state.local_state = CodeMirror.startState(mode, stream.indentation()) #indent(state, ""))
+                    state.local_mode = mode
+                if r:
+                    rml_mode.load_state(state)
+                    rml_mode.push_scope(stream, r[1]+'---')
+                    rml_mode.update_state(state)
+                    return 'operator'
+            elif local_state and not (local_state.tokenize and local_state.tokenize.isString) \
+                    and ( scope.type == 'tag' and stream.indentation() < scope.offset \
+                         or scope.type.endsWith('---') and (r = stream.match(RegExp('^' + scope.type + '(\\s*|#.*)*$')))
+                    ):
+                state.local_state = None
+                state.local_mode = None
+                if r:
+                    state.scopes.pop() # pop '---'
+                    return 'operator'
+
+        if state.local_mode:
+            return state.local_mode.token(stream, state.local_state)
+
+        rml_mode.load_state(state)
+        style = rml_mode.token_lexer(stream)
+        if style:
+            rml_mode.lastStyle = style
+        current = stream.current()
+        if current and style:
+            rml_mode.lastToken = current
+        if stream.eol() and rml_mode.scopes[-1].type in ['"',"'"] :
+            # js-string isn`t closed
+            rml_mode.scopes.pop()
+            style = ERRORCLASS
+        rml_mode.update_state(state)
+        return style
+
+    def  indent(state, textAfter):
+        if state.local_mode:
+            if state.local_mode.indent:
+                return state.local_mode.indent(state.local_state, textAfter)
+            else:
+                return CodeMirror.Pass
+
+        #rml_mode.load_state(state)
+        if state.tokenize != rml_mode.token_base:
+            return (state.tokenize and state.tokenize.isString) ? CodeMirror.Pass : 0
+        scope = state.scopes[-1]
+        if  scope.type == '"' or scope.type == "'" :
+            return CodeMirror.Pass
+        closing = textAfter and textAfter.charAt(0) == scope.type
+        if scope.align != None:
+            return scope.align - (closing and state.lastToken != ',' ? 1 : 0)
+        elif closing and state.scopes.length > 1:
+            return state.scopes[-2].offset
+        else:
+            return scope.offset
+
+    external = {
+        startState: start_state,
+        token: token,
+        indent: indent,
+        lineComment: "#",
+        fold: "indent",
+        electricInput: /^\s*[\}\]\)]$/,
+        copyState : def(state): return rml_mode.copy_state(state);,
+        innerMode: def (state):
+            if state.local_state:
+                return {state: state.local_state, mode: state.local_mode }
+            else:
+                return None
+    }
+    return external

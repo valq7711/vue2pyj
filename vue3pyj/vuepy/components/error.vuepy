@@ -1,0 +1,44 @@
+
+v-def templ:
+    div(style = 'white-space:nowrap;'):
+        template(v-if = 'err'):
+            div:
+                '${err.message}'
+            div(@click = 'open_file', style = 'cursor:pointer; text-align:right;', class= 'orange'):
+                '${err_lc.filename}: [${err_lc.line}:${err_lc.col}]'
+
+
+v-pyj:
++++
+from asset.rs_vue import V_collector, RS_vue_n as RS_vue
+
+vc = V_collector()
+class CError(RS_vue):
+    def __init__(self):
+        super(vc)
+        self.template = templ
+        self.map_store = {
+           err: 'compile_error',
+           open: '/editor.open*',
+           set_cursor: '/editor.set_cursor*'
+        }
+
+    def _init_data(self):
+        ret = {
+        }
+        return ret
+
+    @vc.computed
+    def err_lc(self):
+        return self.err.readfile_error or self.err
+
+    @vc.meth
+    def open_file(self):
+        self.open(self.err_lc.filename, 'w0')
+        self.set_cursor(self.err_lc.line-1, self.err_lc.col)
+def make():
+    return CError()
+
+if __name__== '__main__':
+    main()
+---

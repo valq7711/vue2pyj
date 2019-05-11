@@ -1,0 +1,291 @@
+
+
+# ---- store utils -------------
+def find_recursive(obj, cb, max_iter ):
+    max_iter = max_iter or 1000
+    i = 0
+    ctx = {}
+    ret  = cb.call(ctx, obj, i)
+    while !ret[1] and i < max_iter:
+        ret  = cb.call(ctx, ret[0], i)
+        i+=1
+    if i >= max_iter:
+        raise Error('max iteration exceeded')
+    return ret[0]
+
+def make_prop_chain(path, prefix, splitter):
+    prefix = prefix or ''
+    splitter = splitter or '.'
+    return path.split(splitter).filter(def(v): return v;).reduce(def(p,v): return p + prefix + '.' +  v;, '')
+
+def make_prop_getter(prop_chain):
+    me = make_prop_getter
+    if not (ret = me._memo[prop_chain]):
+        ret = me._memo[prop_chain] = eval('(obj)=>obj' + prop_chain)
+    return ret
+make_prop_getter._memo = {}
+
+def split_modgetter_rest(store, path):
+    self = store
+    mod_rest = /(^(\/[\w$]+)+)((\.[^.]+)+)$/.exec(path)
+    if not mod_rest:
+        return [def(): return self;, path]
+    else:
+        modgetter =  make_prop_getter(make_prop_chain(mod_rest[1][1:], '.modules', '/'))
+    return [modgetter, mod_rest[3][1:]]
+
+# ---- /store utils -------------
+
+
+class RS_state_api:
+    def __init__(self, vc, vue, state):
+        self.vue = vue
+        self.raw_getters = vc._getters
+        self.mutations = vc._mutations
+
+        self.state_getters = new vue({
+            data : {state: state},
+            computed : self.raw_getters,
+            self: self,
+            map_store: vc._map_store
+        })
+        self.state = self.state_getters.state
+        self.getters = {}
+        # small hack to extract getters
+        get_prop = Object.getOwnPropertyDescriptor
+        if self.raw_getters:
+            for getter_name in self.raw_getters:
+                self.getters[getter_name] = \
+                    get_prop(self.state_getters, getter_name).get
+
+    def commit(self, mutation, *payload):
+        print('mutation: ', mutation)
+        print('\tpayload: ',  payload)
+        if (h = self.mutations[mutation]):
+            h.apply(self, payload)
+        else:
+            raise Error('unknown mutation: ' + mutation)
+
+    def $del(self):
+        self.state_getters.$delete.apply(self.state_getters, arguments)
+
+    def $set(self):
+        self.state_getters.$set.apply(self.state_getters, arguments)
+
+
+    def check_path(self, path):
+        path = path.split('\.')
+        if len(path) == 1:
+            return self.state.hasOwnProperty(path[0])
+        try:
+            last_prnt = path[:-1].reduce(def(s, name): return s[name];, self.state)
+        except TypeError:
+            return False
+        return last_prnt.hasOwnProperty(path[-1])
+
+    def _get(self, path):
+        return  make_prop_getter(make_prop_chain(path))(self.state)
+
+    def get(self, path):
+        if self.getters.hasOwnProperty(path):
+            return self.state_getters[path]
+        else:
+            return self._get(path)
+
+    def add_getter(self, h, as_name):
+        as_name = as_name or h.__name__ or h.name
+        if not (as_name and type(as_name).startsWith('Str') ):
+            raise Error('can`t get the name of new getter: ' + h)
+        if as_name == 'state':
+            raise Error('`state` is bad name for new getter: ' + h)
+        v = new self.vue({computed: {(as_name): def(): return h.apply(self.state_getters, arguments);}})
+        getter = Object.getOwnPropertyDescriptor(v, as_name)
+        print('v', as_name, getter)
+        Object.defineProperty(self.state_getters, as_name, getter)
+        self.getters[as_name] = getter.get
+        #v.$destroy()
+
+
+    def add_mutation(self, h, as_name):
+        as_name = as_name or h.__name__ or h.name
+        if not (as_name and type(as_name).startsWith('Str') ):
+            raise Error('can`t get the name of new mutation: ' + h)
+        if as_name in self.mutations:
+            pass
+        elif self.hasOwnProperty(as_name):
+            raise Error('Bad mutation name: ' + as_name)
+        self.mutations[as_name] = self[as_name] = h
+
+
+class RS_store:
+    def __init__(self):
+        if not self.vue:
+            raise ReferenceError('You should first call Vue.use(Your_Store)')
+        self.dispatch_bound = def(): self.dispatch.apply(self, arguments);
+        self.commit_bound   = def(): self.commit.apply(self, arguments);
+
+        self.$bus = {
+            $on: (def(*args):  self.$on(*args);),
+            $emit: (def(*args):  self.$emit(*args);)
+        }
+    def mount_module(self, mod_obj, as_name):
+        as_name = as_name or mod_obj.__name__ or mod_obj.constructor and mod_obj.constructor.name
+        if not ( as_name and type(as_name).startsWith('Str') ):
+            raise Error('can`t get the name of module: ' + mod_obj)
+        if self.state_api.state.hasOwnProperty(as_name):
+            raise Error('can`t mount module under name `' + as_name + '`,  name already exists')
+        if not self.modules:
+            self.modules = {}
+        self.modules[as_name] = mod_obj
+        self.state_api.$set(self.state_api.state, as_name, mod_obj.state_api.state)
+
+    def _get(self, path):
+        '''
+        looks for pure state only
+        getters are ignored
+        '''
+        mod, rest = split_modgetter_rest(self, path)
+        return mod(self).state_api._get(rest)
+
+    def get(self, path):
+        '''
+        returns getter-value or state
+        looks for getter first
+        '''
+        mod, rest = split_modgetter_rest(self, path)
+        return mod(self).state_api.get(rest)
+
+    def getter_factory(self, path):
+        '''
+        also accepts (modgetter, rest) as args
+        '''
+        argtype = type(path)
+        if argtype[0] is 'S': # String - regular call as  f(path)
+            modgetter, rest =  split_modgetter_rest(self, path)
+        elif argtype[0] is 'F': # Function - call as f(modgetter, rest)
+            modgetter = arguments[0]
+            rest = arguments[1]
+        else:
+            raise Error('Wrong args: ', arguments)
+        getter = make_prop_getter(make_prop_chain(rest))
+        return def():
+            mod = modgetter(self)
+            if mod.state_api.getters.hasOwnProperty(rest):
+                return mod.state_api.state_getters[rest];
+            else:
+                return getter(mod.state_api.state)
+
+    def handler_factory(self, path):
+        modgetter, rest =  split_modgetter_rest(self, path)
+        if rest.endsWith('~'):
+            mutation = rest[:-1]
+            return def(*args): modgetter(self).state_api.commit(mutation, *args);
+        elif rest.endsWith('*'):
+            action = rest[:-1]
+            return def(*args): modgetter(self)[action](*args);
+        else:
+            return self.getter_factory(modgetter, rest)
+
+    def $on(self):
+        self.state_api.state_getters.$on.apply(self.state_api.state_getters, arguments)
+
+    def $emit(self):
+        self.state_api.state_getters.$emit.apply(self.state_api.state_getters, arguments)
+
+    def commit(self, mutation, *payload):
+        modgetter, mutation =  split_modgetter_rest(self, mutation)
+        modgetter(self).state_api.commit(mutation, *payload)
+
+
+    def _dispatch(self, action, *payload):
+        print('action: ', action)
+        print('\tpayload: ',  payload)
+        if not self.actions or (not (action in self.actions)):
+            raise Error('unknown action: ' + action)
+        self[action].apply(self, payload)
+
+    def dispatch(self, action, *payload):
+        modgetter, action =  split_modgetter_rest(self, action)
+        mod = modgetter(self)
+        mod._dispatch(action, *payload)
+
+
+
+    def add_action(self, h, as_name):
+        as_name = as_name or h.__name__ or h.name
+        if not (as_name and type(as_name).startsWith('Str') ):
+            raise Error('can`t get the name of new action: ' + h)
+        if as_name in self.actions:
+            pass
+        elif self.hasOwnProperty(as_name):
+            raise Error('Bad action name: ' + as_name)
+        self.actions[as_name] = self[as_name] = h
+
+    @staticmethod
+    def before_create():
+        map_store = 'map_store'
+        is_mutation_re  =  /(.+)~$/
+        is_action_re  =  /(.+)\*$/
+
+        $opts = this.$options
+        #!don't replace with map_store in ...
+        if not $opts[map_store]:
+            return
+
+        self = $opts.store or (def(vm):
+            tmp = find_recursive(vm, def(o): return [o.$parent, !o.$parent or o.$parent.$options.store];)
+            store = tmp.$options.store
+            if not store:
+                raise ReferenceError('store not found')
+            return store
+        )(this)
+
+        injectors = {
+            '*': (def(f): return def(): f.call(this, self.dispatch_bound, *arguments);),
+            '~': (def(f): return def(): f.call(this, self.commit_bound, *arguments);)
+        }
+
+        for opt in ['methods', 'computed']:
+            if not $opts[opt]:
+                $opts[opt] = {}
+
+        $map_opts = $opts[map_store]
+        if Array.isArray($map_opts):
+            $map_opts = { k:k for k in $map_opts}
+
+        for map_to in $map_opts:
+            map_from = $map_opts[map_to]
+            if map_from is '$bus':
+                this[map_to] = self.$bus
+            elif map_from in ['*','~']:
+                if not $opts.methods[map_to]:
+                    raise ReferenceError('Can`t map ' + map_from +' to non-existing method: ' + map_to)
+                $opts.methods[map_to] = injectors[map_from]($opts.methods[map_to])
+            elif type(map_from).startsWith('Fun') and (map_to_split = /(.+?)(\*|~)$/.exec(map_to)):
+                map_to_meth = map_to_split[1]
+                store_meth = map_to_split[2]
+                $opts.methods[map_to_meth] = injectors[store_meth](map_from)
+            else:
+                modgetter, rest = split_modgetter_rest(self, map_from)
+                store_mod = modgetter(self)
+                handler = self.handler_factory(map_from)
+                if (action = is_action_re.exec(rest)):
+                    action = action[1]
+                    if not (action in store_mod.actions):
+                        raise ReferenceError('unknown action in `map_store`: ' + map_from)
+                    $opts['methods'][map_to] = handler
+                elif (mutation = is_mutation_re.exec(rest)):
+                    mutation = mutation[1]
+                    if not (mutation in store_mod.state_api.mutations):
+                        raise ReferenceError('unknown mutation in `map_store`: ' + map_from)
+                    $opts['methods'][map_to] = handler
+                elif rest in store_mod.state_api.getters or store_mod.state_api.check_path(rest):
+                    $opts['computed'][map_to] = handler
+                else:
+                    raise ReferenceError('Can`t map `' + map_from + '` to `' + map_to +  '`')
+
+    @staticmethod
+    def install(Vue, opt):
+        RS_store.prototype.vue = Vue
+        Vue.mixin({ beforeCreate: RS_store.before_create })
+

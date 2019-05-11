@@ -1,0 +1,70 @@
+import asset.fs_path as fs_path
+output_path_map = {
+    'html': def(pth): return '/templates/' + \
+                pth.split(/\//).filter(def(x): return x and x != 'root';)[1:].join('/') + '.html';,
+    'js': '/static/js/',
+    'css': '/static/css/',
+}
+
+def update_css(css, frags_to_update):
+    def parse_css(css):
+        re_splitter = /(\n?^ *\/\* *-+ *< *([^\s>]+) *> *-+ *\*\/ *$\n?)/m
+        frags = css.split(re_splitter)
+        stored_frags = {'_css_head_': frags[0] or ''}
+        if len(frags) > 1:
+            i = 2
+            while i< len(frags):
+                stored_by =  frags[i]
+                content = frags[i+1]
+                stored_frags[stored_by] = content or ''
+                i += 3
+        return stored_frags
+    stored_frags = parse_css(css)
+    css_head = stored_frags._css_head_
+    del stored_frags._css_head_
+    updated_frags = Object.assign({}, stored_frags, frags_to_update)
+    out = []
+    for stored_by in updated_frags:
+        section = '\n/*---------< '+ stored_by +' >-------------*/\n'
+        out.push(section + updated_frags[stored_by])
+    return css_head + out.join('')
+
+def store_css(css_to_store, opath, fs):
+    """
+    css_to_store is a hash:
+        'a.css' :
+            'foo.vuepy': "a { color: black } ..."
+            'bar.vuepy': "div.error { color: red } ..."
+            ...
+        ...
+    """
+    opath_id = fs.id_by_path(opath)
+    for css_file in css_to_store:
+        fp = fs.path_join(opath, css_file)
+        fid = fs.id_by_path(fp)
+        if not fid:
+            fid = fs.create_file(css_file, opath_id)
+        css_s = update_css(fs.files[fid].content, css_to_store[css_file])
+        fs.write_file(fid, css_s)
+
+def output(compiled, fs):
+    fp = compiled.src
+    ps = fs_path.path_split(fp)
+    for ext in compiled:
+        if ext is 'src' or not compiled[ext]:
+            continue
+        ofp = None
+        if (opath = output_path_map[ext]):
+            if isinstance(opath, Function):
+                ofp = opath = opath(ps.fpath_no_ext, ext)
+
+        if ext == 'css':
+            store_css(compiled[ext], opath or ps.dir, fs)
+        else:
+            if not ofp:
+                ofp = fs.path_join(opath or ps.dir, ps.fname_no_ext + '.' + ext)
+            fid = fs.id_by_path(ofp)
+            if not fid:
+                fid = fs.create_file(ofp)
+            fs.write_file(fid, compiled[ext])
+

@@ -1,0 +1,75 @@
+
+def default_():
+    user = {
+        label: 'Login',
+        href: '#login',
+        name: 'login',
+    }
+
+    ret = {
+        left: [
+            {label: '<i class = "fa fa-power-off"></i>', href: '#cmd:select_app'},
+            {label: '${w3p_app}', href: '#cmd:toggle_explorer'},
+            {label: 'Save', href: '#cmd:save' },
+            {label: 'Compile', href: '#cmd:compile'},
+            {label: 'Editor',subitems: [
+                {label: 'Close all', href: '#cmd:close_all'},
+                {label: 'Save all & close', href: '#cmd:save_all_close'},
+            ]},
+        ],
+        right: [
+            {label: 'ritem1', slot: 'search'},
+            user,
+            {label: 'flash', slot: 'flash'},
+            {label: 'Errors', href: '../../admin/default/errors/${w3p_app}',
+                attrs: { target : '_blank', rel : 'noopener'}
+            }
+        ]
+    }
+    return ret
+
+def authorized():
+    user_logged_in = {
+        label: '<i class="fa fa-user"></i> ${user_name}',
+        subitems: [
+                {label: 'Выйти',  href: '#cmd:logout'},
+                {label: 'Профиль', href: '#'}
+        ]
+    }
+    ret = default_()
+    replace_by_name(ret.right, 'login', user_logged_in)
+    return ret
+
+
+def get_factory():
+    # return  {menu_user, menus}
+    ret = {
+        default: default_,
+        authorized: authorized
+    }
+    return ret
+
+
+def replace_by_name(items, name, obj):
+    if not name:
+        raise Error('name required')
+    for i, it in enumerate(items):
+        if it.name is name:
+            items[i] = obj
+            return True
+        if (subs = it.items or it.subitems):
+            if (ret = replace_by_name(subs, name, obj)):
+                return ret
+
+
+def menu_by_name(items, name):
+    if not name:
+        raise Error('name required')
+
+    for it in items:
+        if it.name is name:
+            return it
+        if (subs = it.items or it.subitems):
+            if (ret = menu_by_name(subs, name)):
+                return ret
+

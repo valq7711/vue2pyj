@@ -1,0 +1,56 @@
+
+class Server_w3p_json:
+    def __init__(self, axios, baseURL, bus):
+        self.bus = bus
+        self.baseURL = baseURL
+        self.srv = axios.create({
+              baseURL: baseURL,
+              timeout: 10000,
+              withCredentials: True
+            })
+        self.last_resp =''
+        self.last_error =''
+
+    def call(self, meth, f, args, vars):
+        if meth is 'get':
+            if Array.isArray(args):
+                fargs = args[:]
+                fargs.unshift(f)
+                f = fargs.join('/')
+                args = undefined
+                if vars and not vars.params:
+                    vars = {params: vars}
+            elif not args.params:
+                args = {params: args}
+
+        ret =  self.srv[meth](f, args)
+        ret.then(def(r): self.done(r);, def(r): self.raise_error(r);)
+        return ret
+
+    def get(self, f, args):
+        return self.call('get', f, args)
+
+    def post(self, f, args):
+        return self.call('post', f, args)
+
+    def done(self, resp):
+        self.last_resp = resp
+        if self.bus:
+            self.bus.$emit('server', {event: 'done', emitter: self, data: resp.data })
+
+    def raise_error(self, err):
+        self.last_error = err
+        if self.bus:
+            self.bus.$emit('server', {event: 'error', emitter: self, data: err})
+
+class Server:
+    def __init__(self, axios, appURL, bus):
+        self.__config__ = {
+            appURL : appURL,
+            bus : bus
+        }
+
+        self.default = Server_w3p_json(axios, appURL, bus)
+        # self.some = Server_w3p_json(axios, appURL + '/some', bus)
+
+

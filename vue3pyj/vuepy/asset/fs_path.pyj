@@ -1,0 +1,64 @@
+RE_FP_INFO = /^((.*?\/)?([^\/]+?))(\.([^\.]+))?$/
+
+def is_valid_name(name):
+    return /^(\.\w|\w)(\w|\.)*/.test(name)
+
+def to_arr(path):
+    if path =='' or  path == '/': return [''];
+    dirs = path.split('/')
+    if dirs[-1] == '': dirs = dirs[:-1];
+    beg = dirs[0] == '' ? 1 : 0
+    for d in dirs[beg:]:
+        if not (d == '..'  or is_valid_name(d)):
+            raise Error('Bad path: ' + path)
+    return dirs
+
+def path_arr_resolve(arr, allow_out_root):
+    i = 0
+    ret = []
+    path_start = 0
+    for it in arr:
+        if it == '':
+            ret[0] = ''
+            i = 1
+            path_start = 1
+            continue
+        elif it == '..':
+            i -= 1
+            if i >= path_start:
+                continue
+            elif not allow_out_root:
+                raise Error('Out of root dir')
+            else:
+                ret.unshift('..')
+                path_start += 1
+                i += 2
+                continue
+        ret[i] = it
+        i += 1
+    return ret[:i]
+
+def path_join():
+    arr = []
+    for p_str in arguments:
+        if p_str:
+            Array.prototype.push.apply(arr, to_arr(p_str))
+    return path_arr_resolve(arr).join('/')
+
+def rel_path_join():
+    arr = []
+    for p_str in arguments:
+        if p_str:
+            Array.prototype.push.apply(arr, to_arr(p_str))
+    return path_arr_resolve(arr, True).join('/')
+
+def path_split(pth):
+    fp_info = RE_FP_INFO.exec(pth)
+    ret= {
+        fpath_no_ext : fp_info[1],
+        dir : fp_info[2],
+        fname_no_ext : fp_info[3],
+        ext : fp_info[5],
+    }
+    ret.tail = ret.fname = ret.ext ? ret.fname_no_ext + '.' + ret.ext : ret.fname_no_ext
+    return ret
