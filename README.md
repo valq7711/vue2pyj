@@ -22,6 +22,7 @@ To compile it do the following:
 Vuepy file could consist of several parts (all parts are optional): 
 ```python
 # vuepy/foo.vuepy
+
 #This is the RapydML-like part - will be compiled to views/foo.html
 html:
     head:
@@ -29,7 +30,8 @@ html:
     body:
         div(id = 'app'):
     script(src = "{{=URL('static', 'js/foo.js')}}"):
-# this is vue template part - will be compiled to html string 
+    
+# This is vue template part - will be compiled to html string 
 # and injected into v-pyj part as foo_templ variable (see below)    
 v-def foo_templ:
   div:
@@ -37,7 +39,8 @@ v-def foo_templ:
       ul:
           li(v-for = 'it in items'): '${it}'
   ...
-# this is v-pyj part (regular rapydscript) - will be compiled to static/js/foo.js    
+  
+# This is v-pyj part (regular rapydscript) - will be compiled to static/js/foo.js    
 v-pyj:
     # template will be injected here as variable:
     #foo_templ = '''
