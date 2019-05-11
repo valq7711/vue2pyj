@@ -2,7 +2,7 @@ define(["vue","codemirror/lib/codemirror","rapydscript_web","axios.min"],functio
 var exports = {};
 (function(){
 "use strict";
-var ՐՏ_1, ՐՏ_6, ՐՏ_7, ՐՏ_10, ՐՏ_11, ՐՏ_12, ՐՏ_13, ՐՏ_28, ՐՏ_53, ՐՏ_54, ՐՏ_58, ՐՏ_61, ՐՏ_62, ՐՏ_63;
+var ՐՏ_1, ՐՏ_2, ՐՏ_3, ՐՏ_6, ՐՏ_7, ՐՏ_8, ՐՏ_9, ՐՏ_24, ՐՏ_49, ՐՏ_50, ՐՏ_54, ՐՏ_57, ՐՏ_58, ՐՏ_59;
 function enumerate(item) {
     var arr, iter, i;
     arr = [];
@@ -291,7 +291,7 @@ var ՐՏ_modules = {};
         });
         ;
     })(), ՐՏ_1);
-    class RS_vue_n {
+    class RS_vue {
         constructor (v_collector) {
             var ՐՏitr1, ՐՏidx1, ՐՏitr2, ՐՏidx2, ՐՏitr3, ՐՏidx3;
             var self = this;
@@ -760,7 +760,7 @@ var ՐՏ_modules = {};
 
     ՐՏ_modules["asset.rs_vue"]["V_collector"] = V_collector;
 
-    ՐՏ_modules["asset.rs_vue"]["RS_vue_n"] = RS_vue_n;
+    ՐՏ_modules["asset.rs_vue"]["RS_vue"] = RS_vue;
 
     ՐՏ_modules["asset.rs_vue"]["RS_state_api"] = RS_state_api;
 
@@ -864,34 +864,6 @@ var ՐՏ_modules = {};
         document.body.removeChild(el);
         window.URL.revokeObjectURL(blob);
     }
-    function format_num(format, num) {
-        var ՐՏ_2, ՐՏ_3;
-        var sign_zer_dig, flt_num, sign, zer, dot_idx;
-        sign_zer_dig = /^%?(\+)?(\d+)?\.(\d+)?f$/.exec(format);
-        if (sign_zer_dig) {
-            flt_num = parseFloat(num);
-            sign = flt_num < 0 ? "-" : sign_zer_dig[1] && flt_num > 0 ? "+" : "";
-            flt_num = Math.abs(flt_num);
-            if (sign_zer_dig[3]) {
-                flt_num = flt_num.toFixed(parseInt(sign_zer_dig[3]));
-            }
-            if (sign_zer_dig[2]) {
-                zer = parseInt(sign_zer_dig[2]);
-                flt_num = flt_num.toString();
-                dot_idx = flt_num.indexOf(".");
-                dot_idx = (dot_idx !== (ՐՏ_2 = -1) && (typeof dot_idx !== "object" || !ՐՏ_eq(dot_idx, ՐՏ_2))) ? dot_idx : flt_num.length;
-                if ((dot_idx !== (ՐՏ_3 = -1) && (typeof dot_idx !== "object" || !ՐՏ_eq(dot_idx, ՐՏ_3)))) {
-                    if (zer - dot_idx > 0) {
-                        flt_num = "0".repeat(zer - dot_idx) + flt_num;
-                    }
-                }
-            }
-            flt_num = sign + flt_num;
-            return flt_num;
-        } else {
-            throw new Error("bad format: " + format);
-        }
-    }
     function SF(text, props) {
         function replacer(str_, p) {
             var t, p_chain;
@@ -906,125 +878,6 @@ var ՐՏ_modules = {};
             return props[p];
         }
         return text.replace(/\$\{ *(.+?) *\}/g, replacer);
-    }
-    function _SF(s, args) {
-        var splitter, arr, cntr, i, name_format;
-        splitter = /(%%)|(%(?:\([a-zA-Z0-9_.]+\))?(?:(?:s)|(?:\+?\d*\.\d*f)))/;
-        arr = s.split(splitter);
-        cntr = 0;
-        for (i = 0; i < arr.length; i++) {
-            if (arr[i] && arr[i].startsWith("%")) {
-                if (arr[i] === "%%") {
-                    arr[i] = "%";
-                } else if (arr[i] === "%s") {
-                    arr[i] = args[cntr];
-                    ++cntr;
-                } else if (arr[i].startsWith("%(")) {
-                    name_format = /%\(([a-zA-Z0-9_.]+)\)(s|\+?\d*\.\d*f)/.exec(arr[i]);
-                    if (name_format[2] === "s") {
-                        arr[i] = args[name_format[1]];
-                    } else {
-                        arr[i] = format_num(name_format[2], args[name_format[1]]);
-                    }
-                } else if (/%(\+)?(\d+)?\.(\d+)?f/.test(arr[i])) {
-                    arr[i] = format_num(arr[i], args[cntr]);
-                    ++cntr;
-                } else {
-                    throw new Error("bad format: " + arr[i]);
-                }
-            }
-        }
-        return arr.join("");
-    }
-    class Drag_listener {
-        constructor (catcher, debounce) {
-            var self = this;
-            self.catcher = catcher;
-            self.x0 = 0;
-            self.y0 = 0;
-            self.dx = 0;
-            self.dy = 0;
-            self.vc = null;
-            self.listeners = {};
-            self.debounce = debounce || 50;
-        }
-        get_mousedn_listener () {
-            var self = this;
-            function _inner_(e) {
-                var listeners;
-                self.vc = this;
-                self.x0 = e.clientX;
-                self.y0 = e.clientY;
-                if (!self.catcher) {
-                    self.catcher = function(what, e, args) {
-                        self.vc.$emit(what, e, args);
-                    };
-                }
-                if (!(ՐՏ_in("move", self.listeners))) {
-                    self.listeners = {
-                        move: self.mousemove(),
-                        up: self.mouseup()
-                    };
-                }
-                listeners = self.listeners;
-                document.addEventListener("mousemove", listeners.move, false);
-                document.addEventListener("mouseup", listeners.up, false);
-                e.stopPropagation();
-                e.preventDefault();
-                self.catcher("drag_start", e, {
-                    x0: self.x0,
-                    y0: self.y0,
-                    vc: self.vc
-                });
-            }
-            self.listeners.dn = _inner_;
-            return _inner_;
-        }
-        mousemove () {
-            var self = this;
-            function _inner_(e) {
-                var ՐՏ_4, ՐՏ_5;
-                e.stopPropagation();
-                e.preventDefault();
-                function process_move() {
-                    self.dx = e.clientX - self.x0;
-                    self.dy = e.clientY - self.y0;
-                    self.catcher("drag_move", e, {
-                        dx: self.dx,
-                        dy: self.dy,
-                        vc: self.vc
-                    });
-                    _inner_.move_fired = true;
-                }
-                if (((ՐՏ_4 = _inner_.move_fired) === (ՐՏ_5 = void 0) || typeof ՐՏ_4 === "object" && ՐՏ_eq(ՐՏ_4, ՐՏ_5))) {
-                    process_move();
-                } else if (_inner_.move_fired) {
-                    _inner_.move_fired = false;
-                    setTimeout(process_move, self.debounce);
-                }
-            }
-            return _inner_;
-        }
-        mouseup () {
-            var self = this;
-            function _inner_(e) {
-                document.removeEventListener("mousemove", self.listeners.move);
-                document.removeEventListener("mouseup", self.listeners.up);
-                e.stopPropagation();
-                e.preventDefault();
-                self.catcher("drag_stop", e, {
-                    dx: self.dx,
-                    dy: self.dy,
-                    vc: self.vc
-                });
-            }
-            return _inner_;
-        }
-        static get_listener (catcher, debounce) {
-            var obj;
-            obj = new Drag_listener(catcher, debounce);
-            return obj.get_mousedn_listener();
-        }
     }
     function make_drag_listener(catcher, debounce) {
         var ctx;
@@ -1119,13 +972,7 @@ var ՐՏ_modules = {};
 
     ՐՏ_modules["asset.common"]["download"] = download;
 
-    ՐՏ_modules["asset.common"]["format_num"] = format_num;
-
     ՐՏ_modules["asset.common"]["SF"] = SF;
-
-    ՐՏ_modules["asset.common"]["_SF"] = _SF;
-
-    ՐՏ_modules["asset.common"]["Drag_listener"] = Drag_listener;
 
     ՐՏ_modules["asset.common"]["make_drag_listener"] = make_drag_listener;
 
@@ -1161,7 +1008,7 @@ var ՐՏ_modules = {};
     var v_meth = ՐՏ_modules["asset.rs_vue"].v_meth;
     var v_computed = ՐՏ_modules["asset.rs_vue"].v_computed;
     var v_watch = ՐՏ_modules["asset.rs_vue"].v_watch;
-    var RS_vue_n = ՐՏ_modules["asset.rs_vue"].RS_vue_n;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
     
     "\n@external\nclass Vue:\n    @staticmethod\n    def component():\n        pass\n";
@@ -1177,7 +1024,7 @@ var ՐՏ_modules = {};
         return cur;
     }
     vc = new V_collector();
-    var Folder_content = (ՐՏ_6 = class Folder_content extends RS_vue_n {
+    var Folder_content = (ՐՏ_2 = class Folder_content extends RS_vue {
         constructor () {
             super(vc);
             var self = this;
@@ -1292,30 +1139,30 @@ var ՐՏ_modules = {};
             return ret;
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_6.prototype, {
+        Object.defineProperties(ՐՏ_2.prototype, {
             toggle_select: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.meth(ՐՏ_6.prototype.toggle_select)
+                value: vc.meth(ՐՏ_2.prototype.toggle_select)
             },
             selected_cnt: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.meth(ՐՏ_6.prototype.selected_cnt)
+                value: vc.meth(ՐՏ_2.prototype.selected_cnt)
             },
             save_as: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.watch(ՐՏ_6.prototype.save_as)
+                value: vc.watch(ՐՏ_2.prototype.save_as)
             },
             rows_c: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.computed(ՐՏ_6.prototype.rows_c)
+                value: vc.computed(ՐՏ_2.prototype.rows_c)
             }
         });
         ;
-    })(), ՐՏ_6);
+    })(), ՐՏ_2);
     function make() {
         return new Folder_content();
     }
@@ -1344,11 +1191,11 @@ var ՐՏ_modules = {};
     var v_meth = ՐՏ_modules["asset.rs_vue"].v_meth;
     var v_computed = ՐՏ_modules["asset.rs_vue"].v_computed;
     var v_watch = ՐՏ_modules["asset.rs_vue"].v_watch;
-    var RS_vue_n = ՐՏ_modules["asset.rs_vue"].RS_vue_n;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
     
     vc = new V_collector();
-    var Editor = (ՐՏ_7 = class Editor extends RS_vue_n {
+    var Editor = (ՐՏ_3 = class Editor extends RS_vue {
         constructor () {
             super(vc);
             var self = this;
@@ -1424,56 +1271,56 @@ var ՐՏ_modules = {};
             });
         }
         go_error () {
-            var ՐՏ_8, ՐՏ_9;
+            var ՐՏ_4, ՐՏ_5;
             var self = this;
             var err;
             err = self.error.readfile_error || self.error;
-            if (!err || ((ՐՏ_8 = err.line) === (ՐՏ_9 = void 0) || typeof ՐՏ_8 === "object" && ՐՏ_eq(ՐՏ_8, ՐՏ_9))) {
+            if (!err || ((ՐՏ_4 = err.line) === (ՐՏ_5 = void 0) || typeof ՐՏ_4 === "object" && ՐՏ_eq(ՐՏ_4, ՐՏ_5))) {
                 return;
             }
             self.cm.focus();
             self.cm.doc.setCursor(err.line - 1, err.col);
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_7.prototype, {
+        Object.defineProperties(ՐՏ_3.prototype, {
             doc_num: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.computed(ՐՏ_7.prototype.doc_num)
+                value: vc.computed(ՐՏ_3.prototype.doc_num)
             },
             doc_info: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.computed(ՐՏ_7.prototype.doc_info)
+                value: vc.computed(ՐՏ_3.prototype.doc_info)
             },
             doc_path: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.computed(ՐՏ_7.prototype.doc_path)
+                value: vc.computed(ՐՏ_3.prototype.doc_path)
             },
             edit_focus: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.meth(ՐՏ_7.prototype.edit_focus)
+                value: vc.meth(ՐՏ_3.prototype.edit_focus)
             },
             cursor_move: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.meth(ՐՏ_7.prototype.cursor_move)
+                value: vc.meth(ՐՏ_3.prototype.cursor_move)
             },
             doc_num_watch: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.watch("doc_num")(ՐՏ_7.prototype.doc_num_watch)
+                value: vc.watch("doc_num")(ՐՏ_3.prototype.doc_num_watch)
             },
             go_error: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.meth(ՐՏ_7.prototype.go_error)
+                value: vc.meth(ՐՏ_3.prototype.go_error)
             }
         });
         ;
-    })(), ՐՏ_7);
+    })(), ՐՏ_3);
     function make() {
         return new Editor();
     }
@@ -1500,11 +1347,11 @@ var ՐՏ_modules = {};
     var v_meth = ՐՏ_modules["asset.rs_vue"].v_meth;
     var v_computed = ՐՏ_modules["asset.rs_vue"].v_computed;
     var v_watch = ՐՏ_modules["asset.rs_vue"].v_watch;
-    var RS_vue_n = ՐՏ_modules["asset.rs_vue"].RS_vue_n;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
     
     vc = new V_collector();
-    class Modal extends RS_vue_n {
+    class Modal extends RS_vue {
         constructor () {
             super(vc);
             var self = this;
@@ -1547,11 +1394,11 @@ var ՐՏ_modules = {};
     var v_meth = ՐՏ_modules["asset.rs_vue"].v_meth;
     var v_computed = ՐՏ_modules["asset.rs_vue"].v_computed;
     var v_watch = ՐՏ_modules["asset.rs_vue"].v_watch;
-    var RS_vue_n = ՐՏ_modules["asset.rs_vue"].RS_vue_n;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
     
     vc = new V_collector();
-    class Confirm extends RS_vue_n {
+    class Confirm extends RS_vue {
         constructor () {
             super(vc);
             var self = this;
@@ -1594,11 +1441,11 @@ var ՐՏ_modules = {};
     var v_meth = ՐՏ_modules["asset.rs_vue"].v_meth;
     var v_computed = ՐՏ_modules["asset.rs_vue"].v_computed;
     var v_watch = ՐՏ_modules["asset.rs_vue"].v_watch;
-    var RS_vue_n = ՐՏ_modules["asset.rs_vue"].RS_vue_n;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
     
     vc = new V_collector();
-    class App_selector extends RS_vue_n {
+    class App_selector extends RS_vue {
         constructor () {
             super(vc);
             var self = this;
@@ -1639,13 +1486,13 @@ var ՐՏ_modules = {};
     var __name__ = "components.menu";
     var templ_menu, vc;
     templ_menu = "\n<div>\n    <ul  v-for = \"side in ['left', 'right']\" class = \"menu\" :class = '{right: side == \"right\"}'>\n        <li  v-for = 'item in menus[side]' :class = '{disabled: is_disabled(item) }'>\n            <template  v-if = 'item.href != undefined'>\n                <a  class = \"black\" :href = \"mount_prop(item.href)\" @click = 'click(item, $event)' v-bind = \"item.attrs\">\n                    <strong  v-html = 'mount_prop(item.label)'/>\n                </a>\n            </template>\n            <template  v-else-if = 'item.subitems'>\n                <a  class = \"black\" v-html = 'mount_prop(item.label)'></a>\n                <ul><li  v-for = 'subitem in item.subitems' :class = '{disabled: is_disabled(subitem) }'>\n                    <a  :href = \"mount_prop(subitem.href)\" @click = 'click(subitem, $event)' v-html = 'mount_prop(subitem.label)' v-bind = \"subitem.attrs\"></a>\n                </li></ul>\n            </template>\n            <template  v-else>\n                <slot  v-if = 'item.slot' :slot_name = 'item.slot'></slot>\n            </template>\n        </li>\n    </ul>\n</div>\n";
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue_n;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
     
     var SF = ՐՏ_modules["asset.common"].SF;
     
     vc = new V_collector();
-    var Menu = (ՐՏ_10 = class Menu extends RS_vue {
+    var Menu = (ՐՏ_6 = class Menu extends RS_vue {
         constructor () {
             super(vc);
             var self = this;
@@ -1681,25 +1528,25 @@ var ՐՏ_modules = {};
             return false;
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_10.prototype, {
+        Object.defineProperties(ՐՏ_6.prototype, {
             mount_prop: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.meth(ՐՏ_10.prototype.mount_prop)
+                value: vc.meth(ՐՏ_6.prototype.mount_prop)
             },
             click: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.meth(ՐՏ_10.prototype.click)
+                value: vc.meth(ՐՏ_6.prototype.click)
             },
             is_disabled: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.meth(ՐՏ_10.prototype.is_disabled)
+                value: vc.meth(ՐՏ_6.prototype.is_disabled)
             }
         });
         ;
-    })(), ՐՏ_10);
+    })(), ՐՏ_6);
     function make() {
         return new Menu();
     }
@@ -1720,10 +1567,10 @@ var ՐՏ_modules = {};
     var templ_flash, vc;
     templ_flash = "\n<div  id = 'flash' :class = 'cls'>\n    <template  v-if = 'component'>\n        <component  :is = 'component' v-bind = 'cargs'></component>\n    </template>\n    <template  v-else>\n        ${msg}\n    </template>\n</div>\n";
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue_n;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
     
     vc = new V_collector();
-    var Flash = (ՐՏ_11 = class Flash extends RS_vue {
+    var Flash = (ՐՏ_7 = class Flash extends RS_vue {
         constructor () {
             super(vc);
             var self = this;
@@ -1775,20 +1622,20 @@ var ՐՏ_modules = {};
             self.hider = null;
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_11.prototype, {
+        Object.defineProperties(ՐՏ_7.prototype, {
             show: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.meth(ՐՏ_11.prototype.show)
+                value: vc.meth(ՐՏ_7.prototype.show)
             },
             hide: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.meth(ՐՏ_11.prototype.hide)
+                value: vc.meth(ՐՏ_7.prototype.hide)
             }
         });
         ;
-    })(), ՐՏ_11);
+    })(), ՐՏ_7);
     function make() {
         return new Flash();
     }
@@ -1809,7 +1656,7 @@ var ՐՏ_modules = {};
     var templ, vc;
     templ = "\n<div>\n    <div  v-if = 'is_busy' class = 'busy' style = 'position: fixed; top:0; left:0; right:0; bottom: 0; z-index:9999'></div>\n    <header  class = \"black padded lifted fill\" style = 'position:fixed; z-index:1000; top:0'>\n        <div  class = \"container\" id = 'top_menu'>\n            <top_menu  class = \"fill middle\" :menus = 'menus' @click_item = 'menu_click.apply(this, arguments)'>\n                <template  slot-scope = 'props'>\n                    <template  v-if = \"props.slot_name == 'search'\">\n                        <div  style = 'display:inline-block; margin-right: 5px'>\n                            <input  class = \"l_rounded barinput\" placeholder = \"Not implemented\" style = 'width:initial'/>\n                            <div  class = 'btn barinput gray r_rounded' style = 'float:right;'>\n                                <i  class = 'fa fa-search' style = 'line-height:1.5'></i>\n                            </div>\n                        </div>\n                    </template>\n                    <template  v-else-if = \"props.slot_name == 'flash'\">\n                        <div  style = 'position:relative;'>\n                            <a  class = 'black'>\n                                <i  class = 'fa fa-bullhorn fa-flip-horizontal'></i>\n                            </a>\n                            <flash  ref = 'flash' class = 'flash'></flash>\n                        </div>\n                        <ul>\n                            <li>\n                                <a  class = 'hidden'></a>\n                                <div  class = 'flash' :class = 'flash.status'>\n                                    <template  v-if = 'flash.component'>\n                                        <component  :is = 'flash.component' v-bind = 'flash.cargs'></component>\n                                    </template>\n                                    <template  v-else>\n                                        ${flash.msg}\n                                    </template>\n                                </div>\n                            </li>\n                        </ul>\n                    </template>\n                </template>\n            </top_menu>\n        </div>\n    </header>\n    <main>\n        <div  class = 'main' style = 'margin-top: 50px; min-height:90vh;'>\n            <slot></slot>\n        </div>\n        <div  v-html = '\"&nbsp;\"'></div>\n    </main>\n</div>\n";
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue_n;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
     
     var menu = ՐՏ_modules["components.menu"];
     
@@ -1871,10 +1718,10 @@ var ՐՏ_modules = {};
     var templ, vc;
     templ = "\n<div  style = 'white-space:nowrap;'>\n    <template  v-if = 'err'>\n        <div>\n            ${err.message}\n        </div>\n        <div  @click = 'open_file' style = 'cursor:pointer; text-align:right;' class = 'orange'>\n            ${err_lc.filename}: [${err_lc.line}:${err_lc.col}]\n        </div>\n    </template>\n</div>\n";
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue_n;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
     
     vc = new V_collector();
-    var CError = (ՐՏ_12 = class CError extends RS_vue {
+    var CError = (ՐՏ_8 = class CError extends RS_vue {
         constructor () {
             super(vc);
             var self = this;
@@ -1901,20 +1748,20 @@ var ՐՏ_modules = {};
             self.set_cursor(self.err_lc.line - 1, self.err_lc.col);
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_12.prototype, {
+        Object.defineProperties(ՐՏ_8.prototype, {
             err_lc: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.computed(ՐՏ_12.prototype.err_lc)
+                value: vc.computed(ՐՏ_8.prototype.err_lc)
             },
             open_file: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.meth(ՐՏ_12.prototype.open_file)
+                value: vc.meth(ՐՏ_8.prototype.open_file)
             }
         });
         ;
-    })(), ՐՏ_12);
+    })(), ՐՏ_8);
     function make() {
         return new CError();
     }
@@ -2100,7 +1947,7 @@ var ՐՏ_modules = {};
             return new Promise(prom);
         }
     }
-    var FS = (ՐՏ_13 = class FS {
+    var FS = (ՐՏ_9 = class FS {
         constructor () {
             var self = this;
             self.files = {};
@@ -2145,7 +1992,7 @@ var ՐՏ_modules = {};
             return errors.length ? errors : null;
         }
         _consistency_errors () {
-            var ՐՏitr17, ՐՏidx17, ՐՏitr18, ՐՏidx18, ՐՏ_14, ՐՏitr19, ՐՏidx19;
+            var ՐՏitr17, ՐՏidx17, ՐՏitr18, ՐՏidx18, ՐՏ_10, ՐՏitr19, ՐՏidx19;
             var self = this;
             var errors, dir_id, dir, it_id, it, f_id, f, parent_dir;
             errors = [];
@@ -2157,7 +2004,7 @@ var ՐՏ_modules = {};
                 for (ՐՏidx18 = 0; ՐՏidx18 < ՐՏitr18.length; ՐՏidx18++) {
                     it_id = ՐՏitr18[ՐՏidx18];
                     it = self.get_info(it_id);
-                    if (((ՐՏ_14 = it.parent) !== dir_id && (typeof ՐՏ_14 !== "object" || !ՐՏ_eq(ՐՏ_14, dir_id)))) {
+                    if (((ՐՏ_10 = it.parent) !== dir_id && (typeof ՐՏ_10 !== "object" || !ՐՏ_eq(ՐՏ_10, dir_id)))) {
                         errors.push({
                             dir_id: dir_id,
                             it_id: it_id
@@ -2218,14 +2065,14 @@ var ՐՏ_modules = {};
             return id.toString();
         }
         _name_to_id (name, parent_id, scope) {
-            var ՐՏitr20, ՐՏidx20, ՐՏ_15;
+            var ՐՏitr20, ՐՏidx20, ՐՏ_11;
             var self = this;
             var f_d, id;
             f_d = typeof scope === "string" ? self[scope] : scope;
             ՐՏitr20 = ՐՏ_Iterable(self.dirs[parent_id].content);
             for (ՐՏidx20 = 0; ՐՏidx20 < ՐՏitr20.length; ՐՏidx20++) {
                 id = ՐՏitr20[ՐՏidx20];
-                if (f_d[id] && ((ՐՏ_15 = f_d[id].name) === name || typeof ՐՏ_15 === "object" && ՐՏ_eq(ՐՏ_15, name))) {
+                if (f_d[id] && ((ՐՏ_11 = f_d[id].name) === name || typeof ՐՏ_11 === "object" && ՐՏ_eq(ՐՏ_11, name))) {
                     return id;
                 }
             }
@@ -2325,7 +2172,7 @@ var ՐՏ_modules = {};
             return dir_id;
         }
         create_file (name, dir_id, content) {
-            var ՐՏ_16;
+            var ՐՏ_12;
             var self = this;
             var ps, id, dt;
             if (dir_id === void 0) {
@@ -2352,7 +2199,7 @@ var ՐՏ_modules = {};
                 mtime: dt
             };
             self.dirs[dir_id].content.push(id);
-            if ((content !== (ՐՏ_16 = void 0) && (typeof content !== "object" || !ՐՏ_eq(content, ՐՏ_16)))) {
+            if ((content !== (ՐՏ_12 = void 0) && (typeof content !== "object" || !ՐՏ_eq(content, ՐՏ_12)))) {
                 self.write_file(id, content);
             }
             return id;
@@ -2427,7 +2274,7 @@ var ՐՏ_modules = {};
             return f_id;
         }
         copy_dir (src, dst) {
-            var ՐՏitr25, ՐՏidx25, ՐՏitr26, ՐՏidx26, ՐՏ_17, ՐՏ_18;
+            var ՐՏitr25, ՐՏidx25, ՐՏitr26, ՐՏidx26, ՐՏ_13, ՐՏ_14;
             var self = this;
             var d, src_content, dir_id, id;
             src = self.dirs[src];
@@ -2444,7 +2291,7 @@ var ՐՏ_modules = {};
             ՐՏitr26 = ՐՏ_Iterable(src_content);
             for (ՐՏidx26 = 0; ՐՏidx26 < ՐՏitr26.length; ՐՏidx26++) {
                 id = ՐՏitr26[ՐՏidx26];
-                if (((ՐՏ_17 = self.get_type(id)) === (ՐՏ_18 = self.DIR) || typeof ՐՏ_17 === "object" && ՐՏ_eq(ՐՏ_17, ՐՏ_18))) {
+                if (((ՐՏ_13 = self.get_type(id)) === (ՐՏ_14 = self.DIR) || typeof ՐՏ_13 === "object" && ՐՏ_eq(ՐՏ_13, ՐՏ_14))) {
                     self.copy_dir(id, dir_id);
                 } else {
                     self.copy_file(id, dir_id);
@@ -2463,7 +2310,7 @@ var ՐՏ_modules = {};
             throw new Error("Bad src_id: " + id);
         }
         move (id, dst_dir_id) {
-            var ՐՏ_19, ՐՏ_20, ՐՏ_21;
+            var ՐՏ_15, ՐՏ_16, ՐՏ_17;
             var self = this;
             var dst_dir, it, up_dir_id, cur_parent_dir, idx;
             dst_dir = self.dirs[dst_dir_id];
@@ -2474,7 +2321,7 @@ var ՐՏ_modules = {};
             if (self._name_to_id(it.name, dst_dir_id, self.map_type[it.type])) {
                 throw new Error("Dir or file already exists in dst_dir: " + it.name);
             }
-            if (((ՐՏ_19 = it.type) === (ՐՏ_20 = self.DIR) || typeof ՐՏ_19 === "object" && ՐՏ_eq(ՐՏ_19, ՐՏ_20))) {
+            if (((ՐՏ_15 = it.type) === (ՐՏ_16 = self.DIR) || typeof ՐՏ_15 === "object" && ՐՏ_eq(ՐՏ_15, ՐՏ_16))) {
                 up_dir_id = dst_dir.id;
                 while (up_dir_id) {
                     if ((up_dir_id === id || typeof up_dir_id === "object" && ՐՏ_eq(up_dir_id, id))) {
@@ -2485,7 +2332,7 @@ var ՐՏ_modules = {};
             }
             cur_parent_dir = self.dirs[it.parent];
             idx = cur_parent_dir.content.indexOf(it.id);
-            if ((idx === (ՐՏ_21 = -1) || typeof idx === "object" && ՐՏ_eq(idx, ՐՏ_21))) {
+            if ((idx === (ՐՏ_17 = -1) || typeof idx === "object" && ՐՏ_eq(idx, ՐՏ_17))) {
                 throw new Error("Unexpected error");
             }
             cur_parent_dir.content.splice(idx, 1);
@@ -2502,7 +2349,7 @@ var ՐՏ_modules = {};
             it.obj.name = new_name;
         }
         get_info (id, with_obj) {
-            var ՐՏ_22;
+            var ՐՏ_18;
             var self = this;
             var type, obj, ret;
             type = self.get_type(id);
@@ -2518,7 +2365,7 @@ var ՐՏ_modules = {};
                 mtime: obj.mtime,
                 ctime: obj.ctime
             };
-            if ((type === (ՐՏ_22 = self.FILE) || typeof type === "object" && ՐՏ_eq(type, ՐՏ_22))) {
+            if ((type === (ՐՏ_18 = self.FILE) || typeof type === "object" && ՐՏ_eq(type, ՐՏ_18))) {
                 ret.md5_hash = obj.md5_hash;
             }
             if (with_obj) {
@@ -2552,14 +2399,14 @@ var ՐՏ_modules = {};
             };
         }
         off (event, listener) {
-            var ՐՏ_23;
+            var ՐՏ_19;
             var self = this;
             var lst, idx;
             if (!(lst = self._listeners[event])) {
                 throw new Error("unknown event: " + event);
             }
             idx = lst.indexOf(listener);
-            if ((idx !== (ՐՏ_23 = -1) && (typeof idx !== "object" || !ՐՏ_eq(idx, ՐՏ_23)))) {
+            if ((idx !== (ՐՏ_19 = -1) && (typeof idx !== "object" || !ՐՏ_eq(idx, ՐՏ_19)))) {
                 lst.splice(idx, 1);
             }
         }
@@ -2610,13 +2457,13 @@ var ՐՏ_modules = {};
             var self = this;
             var arr_pth, prnt_id, dir_id, not_found, name, id;
             function find_id(name, parent_id) {
-                var ՐՏitr29, ՐՏidx29, ՐՏ_24;
+                var ՐՏitr29, ՐՏidx29, ՐՏ_20;
                 var id, it;
                 ՐՏitr29 = ՐՏ_Iterable(self.dirs[parent_id].content);
                 for (ՐՏidx29 = 0; ՐՏidx29 < ՐՏitr29.length; ՐՏidx29++) {
                     id = ՐՏitr29[ՐՏidx29];
                     it = self.dirs[id] || self.files[id];
-                    if (((ՐՏ_24 = it.name) === name || typeof ՐՏ_24 === "object" && ՐՏ_eq(ՐՏ_24, name))) {
+                    if (((ՐՏ_20 = it.name) === name || typeof ՐՏ_20 === "object" && ՐՏ_eq(ՐՏ_20, name))) {
                         return id;
                     }
                 }
@@ -2687,7 +2534,7 @@ var ՐՏ_modules = {};
     }, (function(){
         var FILE = "file";
         var DIR = "dir";
-        Object.defineProperties(ՐՏ_13.prototype, {
+        Object.defineProperties(ՐՏ_9.prototype, {
             FILE: {
                 enumerable: true, 
                 writable: true, 
@@ -2702,7 +2549,7 @@ var ՐՏ_modules = {};
             }
         });
         ;
-    })(), ՐՏ_13);
+    })(), ՐՏ_9);
     ՐՏ_modules["asset.fs"]["FS_local_keeper"] = FS_local_keeper;
 
     ՐՏ_modules["asset.fs"]["FS"] = FS;
@@ -3164,7 +3011,7 @@ var ՐՏ_modules = {};
             return node;
         }
         parse (rml) {
-            var ՐՏ_25, ՐՏ_26;
+            var ՐՏ_21, ՐՏ_22;
             var self = this;
             var parent, main, child_nodes, S, sol, dlt, chunk, compiler, token, node;
             self.src = rml;
@@ -3264,7 +3111,7 @@ var ՐՏ_modules = {};
                         push_scope(node, "beg_end", self.cur_level);
                     }
                 } else if (token._type === "end") {
-                    if (!sol || ((ՐՏ_25 = parent.scope_level) !== (ՐՏ_26 = self.cur_level) && (typeof ՐՏ_25 !== "object" || !ՐՏ_eq(ՐՏ_25, ՐՏ_26)))) {
+                    if (!sol || ((ՐՏ_21 = parent.scope_level) !== (ՐՏ_22 = self.cur_level) && (typeof ՐՏ_21 !== "object" || !ՐՏ_eq(ՐՏ_21, ՐՏ_22)))) {
                         self.raise_err("Unexpected placement of `---`");
                     }
                     if (parent.scoped_by !== "beg_end") {
@@ -3980,10 +3827,10 @@ var ՐՏ_modules = {};
         return ret;
     }
     function maybe_vuepy_error(err) {
-        var ՐՏ_27;
+        var ՐՏ_23;
         var err_fp_no_ext;
         err_fp_no_ext = err.filename && err.filename.split(/\.[^.]+$/)[0];
-        if (err_fp_no_ext && LAST_VUEPY_PREC.fp_no_ext && ((ՐՏ_27 = LAST_VUEPY_PREC.fp_no_ext) === err_fp_no_ext || typeof ՐՏ_27 === "object" && ՐՏ_eq(ՐՏ_27, err_fp_no_ext))) {
+        if (err_fp_no_ext && LAST_VUEPY_PREC.fp_no_ext && ((ՐՏ_23 = LAST_VUEPY_PREC.fp_no_ext) === err_fp_no_ext || typeof ՐՏ_23 === "object" && ՐՏ_eq(ՐՏ_23, err_fp_no_ext))) {
             err.filename = err_fp_no_ext + ".vuepy";
             LAST_VUEPY_PREC.prec.raise_v_pyj_err(err);
         }
@@ -4067,7 +3914,7 @@ var ՐՏ_modules = {};
         }
         return css_head + out.join("");
     }
-    var store_css = (ՐՏ_28 = function store_css(css_to_store, opath, fs) {
+    var store_css = (ՐՏ_24 = function store_css(css_to_store, opath, fs) {
         var ՐՏitr45, ՐՏidx45;
         var opath_id, css_file, fp, fid, css_s;
         opath_id = fs.id_by_path(opath);
@@ -4082,9 +3929,9 @@ var ՐՏ_modules = {};
             css_s = update_css(fs.files[fid].content, css_to_store[css_file]);
             fs.write_file(fid, css_s);
         }
-    }, Object.defineProperty(ՐՏ_28, "__doc__", {
+    }, Object.defineProperty(ՐՏ_24, "__doc__", {
         value: "css_to_store is a hash:\n    'a.css' :\n        'foo.vuepy': \"a { color: black } ...\"\n        'bar.vuepy': \"div.error { color: red } ...\"\n        ...\n    ..."
-    }), ՐՏ_28);
+    }), ՐՏ_24);
     function output(compiled, fs) {
         var ՐՏitr46, ՐՏidx46;
         var fp, ps, ext, ofp, opath, fid;
@@ -4238,7 +4085,7 @@ var ՐՏ_modules = {};
                 return ret;
             }
             dedent_process (stream) {
-                var ՐՏ_29;
+                var ՐՏ_25;
                 var self = this;
                 var indented;
                 indented = stream.indentation();
@@ -4254,7 +4101,7 @@ var ՐՏ_modules = {};
                     }
                 }
                 return {
-                    error: ((ՐՏ_29 = self.scopes[self.scopes.length-1].offset) !== indented && (typeof ՐՏ_29 !== "object" || !ՐՏ_eq(ՐՏ_29, indented)))
+                    error: ((ՐՏ_25 = self.scopes[self.scopes.length-1].offset) !== indented && (typeof ՐՏ_25 !== "object" || !ՐՏ_eq(ՐՏ_25, indented)))
                 };
             }
             token_re (stream) {
@@ -4471,14 +4318,14 @@ var ՐՏ_modules = {};
                 });
             }
             token_lexer (stream) {
-                var ՐՏ_30, ՐՏ_31, ՐՏ_32, ՐՏ_33;
+                var ՐՏ_26, ՐՏ_27, ՐՏ_28, ՐՏ_29;
                 var self = this;
                 var style, current, scope, def_tag_attrs, re_attr, attr_value, delimiter_index;
                 style = self.tokenize(stream);
                 current = stream.current();
                 if (current === ".") {
                     style = stream.match(identifiers, false) ? null : ERRORCLASS;
-                    if ((style === (ՐՏ_30 = null) || typeof style === "object" && ՐՏ_eq(style, ՐՏ_30)) && self.lastStyle === "meta") {
+                    if ((style === (ՐՏ_26 = null) || typeof style === "object" && ՐՏ_eq(style, ՐՏ_26)) && self.lastStyle === "meta") {
                         style = "meta";
                     }
                     return style;
@@ -4531,12 +4378,12 @@ var ՐՏ_modules = {};
                 }
                 if (style && style.startsWith("punctuation")) {
                     delimiter_index = current.length === 1 ? "[({".indexOf(current) : -1;
-                    if ((delimiter_index !== (ՐՏ_31 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_31)))) {
+                    if ((delimiter_index !== (ՐՏ_27 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_27)))) {
                         self.push_scope(stream, "])}"[delimiter_index]);
                     } else {
                         delimiter_index = "])}".indexOf(current);
-                        if ((delimiter_index !== (ՐՏ_32 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_32)))) {
-                            if (((ՐՏ_33 = self.scopes[self.scopes.length-1].type) === current || typeof ՐՏ_33 === "object" && ՐՏ_eq(ՐՏ_33, current))) {
+                        if ((delimiter_index !== (ՐՏ_28 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_28)))) {
+                            if (((ՐՏ_29 = self.scopes[self.scopes.length-1].type) === current || typeof ՐՏ_29 === "object" && ՐՏ_eq(ՐՏ_29, current))) {
                                 self.scopes.pop();
                             } else {
                                 return ERRORCLASS;
@@ -4552,7 +4399,7 @@ var ՐՏ_modules = {};
             return rml_mode.start_state(basecolumn);
         }
         function token(stream, state) {
-            var ՐՏ_34, ՐՏ_35;
+            var ՐՏ_30, ՐՏ_31;
             var scope, r, local_state, mode_name, mode, style, current;
             scope = state.scopes[state.scopes.length-1];
             if (stream.sol()) {
@@ -4572,7 +4419,7 @@ var ՐՏ_modules = {};
                 }
                 r = null;
                 if (!(local_state = state.local_state) && (mode_name = get_mode())) {
-                    if (stream.indentation() >= scope.offset || ((ՐՏ_34 = scope.offset - indentUnit) === (ՐՏ_35 = stream.indentation()) || typeof ՐՏ_34 === "object" && ՐՏ_eq(ՐՏ_34, ՐՏ_35)) && (r = stream.match(/^(\s*)\+{3}(\s|#.*)*$/))) {
+                    if (stream.indentation() >= scope.offset || ((ՐՏ_30 = scope.offset - indentUnit) === (ՐՏ_31 = stream.indentation()) || typeof ՐՏ_30 === "object" && ՐՏ_eq(ՐՏ_30, ՐՏ_31)) && (r = stream.match(/^(\s*)\+{3}(\s|#.*)*$/))) {
                         mode = CodeMirror.getMode(conf, mode_name);
                         state.local_state = CodeMirror.startState(mode, stream.indentation());
                         state.local_mode = mode;
@@ -4612,7 +4459,7 @@ var ՐՏ_modules = {};
             return style;
         }
         function indent(state, textAfter) {
-            var ՐՏ_36, ՐՏ_37, ՐՏ_38, ՐՏ_39, ՐՏ_40, ՐՏ_41;
+            var ՐՏ_32, ՐՏ_33, ՐՏ_34, ՐՏ_35, ՐՏ_36, ՐՏ_37;
             var scope, closing;
             if (state.local_mode) {
                 if (state.local_mode.indent) {
@@ -4621,15 +4468,15 @@ var ՐՏ_modules = {};
                     return CodeMirror.Pass;
                 }
             }
-            if (((ՐՏ_36 = state.tokenize) !== (ՐՏ_37 = rml_mode.token_base) && (typeof ՐՏ_36 !== "object" || !ՐՏ_eq(ՐՏ_36, ՐՏ_37)))) {
+            if (((ՐՏ_32 = state.tokenize) !== (ՐՏ_33 = rml_mode.token_base) && (typeof ՐՏ_32 !== "object" || !ՐՏ_eq(ՐՏ_32, ՐՏ_33)))) {
                 return state.tokenize && state.tokenize.isString ? CodeMirror.Pass : 0;
             }
             scope = state.scopes[state.scopes.length-1];
             if (scope.type === '"' || scope.type === "'") {
                 return CodeMirror.Pass;
             }
-            closing = textAfter && ((ՐՏ_38 = textAfter.charAt(0)) === (ՐՏ_39 = scope.type) || typeof ՐՏ_38 === "object" && ՐՏ_eq(ՐՏ_38, ՐՏ_39));
-            if (((ՐՏ_40 = scope.align) !== (ՐՏ_41 = null) && (typeof ՐՏ_40 !== "object" || !ՐՏ_eq(ՐՏ_40, ՐՏ_41)))) {
+            closing = textAfter && ((ՐՏ_34 = textAfter.charAt(0)) === (ՐՏ_35 = scope.type) || typeof ՐՏ_34 === "object" && ՐՏ_eq(ՐՏ_34, ՐՏ_35));
+            if (((ՐՏ_36 = scope.align) !== (ՐՏ_37 = null) && (typeof ՐՏ_36 !== "object" || !ՐՏ_eq(ՐՏ_36, ՐՏ_37)))) {
                 return scope.align - (closing && state.lastToken !== "," ? 1 : 0);
             } else if (closing && state.scopes.length > 1) {
                 return state.scopes[state.scopes.length-2].offset;
@@ -4759,7 +4606,7 @@ var ՐՏ_modules = {};
                 });
             }
             dedent_process (stream) {
-                var ՐՏ_42;
+                var ՐՏ_38;
                 var self = this;
                 var indented;
                 indented = stream.indentation();
@@ -4775,7 +4622,7 @@ var ՐՏ_modules = {};
                     }
                 }
                 return {
-                    error: ((ՐՏ_42 = self.scopes[self.scopes.length-1].offset) !== indented && (typeof ՐՏ_42 !== "object" || !ՐՏ_eq(ՐՏ_42, indented)))
+                    error: ((ՐՏ_38 = self.scopes[self.scopes.length-1].offset) !== indented && (typeof ՐՏ_38 !== "object" || !ՐՏ_eq(ՐՏ_38, indented)))
                 };
             }
             token_re (stream) {
@@ -4953,7 +4800,7 @@ var ՐՏ_modules = {};
                 });
             }
             token_lexer (stream) {
-                var ՐՏ_43, ՐՏ_44, ՐՏ_45, ՐՏ_46;
+                var ՐՏ_39, ՐՏ_40, ՐՏ_41, ՐՏ_42;
                 var self = this;
                 var style, current, delimiter_index;
                 style = self.tokenize(stream);
@@ -4961,7 +4808,7 @@ var ՐՏ_modules = {};
                 self.is_glueLine = false;
                 if (current === ".") {
                     style = stream.match(identifiers, false) ? null : ERRORCLASS;
-                    if ((style === (ՐՏ_43 = null) || typeof style === "object" && ՐՏ_eq(style, ՐՏ_43)) && self.lastStyle === "meta") {
+                    if ((style === (ՐՏ_39 = null) || typeof style === "object" && ՐՏ_eq(style, ՐՏ_39)) && self.lastStyle === "meta") {
                         style = "meta";
                     }
                     return style;
@@ -4994,12 +4841,12 @@ var ՐՏ_modules = {};
                     }
                 } else {
                     delimiter_index = current.length === 1 ? "[({".indexOf(current) : -1;
-                    if ((delimiter_index !== (ՐՏ_44 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_44)))) {
+                    if ((delimiter_index !== (ՐՏ_40 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_40)))) {
                         self.push_scope(stream, "])}"[delimiter_index]);
                     } else {
                         delimiter_index = "])}".indexOf(current);
-                        if ((delimiter_index !== (ՐՏ_45 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_45)))) {
-                            if (((ՐՏ_46 = self.scopes[self.scopes.length-1].type) === current || typeof ՐՏ_46 === "object" && ՐՏ_eq(ՐՏ_46, current))) {
+                        if ((delimiter_index !== (ՐՏ_41 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_41)))) {
+                            if (((ՐՏ_42 = self.scopes[self.scopes.length-1].type) === current || typeof ՐՏ_42 === "object" && ՐՏ_eq(ՐՏ_42, current))) {
                                 self.scopes.pop();
                             } else {
                                 return ERRORCLASS;
@@ -5049,18 +4896,18 @@ var ՐՏ_modules = {};
             return style;
         }
         function indent(state, textAfter) {
-            var ՐՏ_47, ՐՏ_48, ՐՏ_49, ՐՏ_50, ՐՏ_51, ՐՏ_52;
+            var ՐՏ_43, ՐՏ_44, ՐՏ_45, ՐՏ_46, ՐՏ_47, ՐՏ_48;
             var scope, closing;
             rs_mode.load_state(state);
-            if (rs_mode.tokenize && ((ՐՏ_47 = rs_mode.tokenize) !== (ՐՏ_48 = rs_mode.token_base) && (typeof ՐՏ_47 !== "object" || !ՐՏ_eq(ՐՏ_47, ՐՏ_48)))) {
+            if (rs_mode.tokenize && ((ՐՏ_43 = rs_mode.tokenize) !== (ՐՏ_44 = rs_mode.token_base) && (typeof ՐՏ_43 !== "object" || !ՐՏ_eq(ՐՏ_43, ՐՏ_44)))) {
                 return rs_mode.tokenize.isString ? CodeMirror.Pass : 0;
             }
             scope = rs_mode.scopes[rs_mode.scopes.length-1];
             if (scope.type === ":") {
                 return CodeMirror.Pass;
             }
-            closing = textAfter && ((ՐՏ_49 = textAfter.charAt(0)) === (ՐՏ_50 = scope.type) || typeof ՐՏ_49 === "object" && ՐՏ_eq(ՐՏ_49, ՐՏ_50));
-            if (((ՐՏ_51 = scope.align) !== (ՐՏ_52 = null) && (typeof ՐՏ_51 !== "object" || !ՐՏ_eq(ՐՏ_51, ՐՏ_52)))) {
+            closing = textAfter && ((ՐՏ_45 = textAfter.charAt(0)) === (ՐՏ_46 = scope.type) || typeof ՐՏ_45 === "object" && ՐՏ_eq(ՐՏ_45, ՐՏ_46));
+            if (((ՐՏ_47 = scope.align) !== (ՐՏ_48 = null) && (typeof ՐՏ_47 !== "object" || !ՐՏ_eq(ՐՏ_47, ՐՏ_48)))) {
                 return scope.align - (closing && state.lastToken !== "," ? 1 : 0);
             } else if (closing && rs_mode.scopes.length > 1) {
                 return rs_mode.scopes[rs_mode.scopes.length - 2].offset;
@@ -5096,7 +4943,6 @@ var ՐՏ_modules = {};
     var __name__ = "store.editor";
     var EDITOR_DEFSTATE, vc;
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue_n;
     var RS_store = ՐՏ_modules["asset.rs_vue"].RS_store;
     var RS_state_api = ՐՏ_modules["asset.rs_vue"].RS_state_api;
     
@@ -5122,7 +4968,7 @@ var ՐՏ_modules = {};
         windows: {}
     };
     vc = new V_collector();
-    var State = (ՐՏ_53 = class State extends RS_state_api {
+    var State = (ՐՏ_49 = class State extends RS_state_api {
         constructor (vue, state) {
             super(vc, vue, state || EDITOR_DEFSTATE);
             var self = this;
@@ -5189,71 +5035,71 @@ var ՐՏ_modules = {};
             return aw && aw.doc_num;
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_53.prototype, {
+        Object.defineProperties(ՐՏ_49.prototype, {
             add_window: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_53.prototype.add_window)
+                value: vc.mutation(ՐՏ_49.prototype.add_window)
             },
             set_active_window: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_53.prototype.set_active_window)
+                value: vc.mutation(ՐՏ_49.prototype.set_active_window)
             },
             open: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_53.prototype.open)
+                value: vc.mutation(ՐՏ_49.prototype.open)
             },
             set_doc_info: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_53.prototype.set_doc_info)
+                value: vc.mutation(ՐՏ_49.prototype.set_doc_info)
             },
             set_doc_change_gen: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_53.prototype.set_doc_change_gen)
+                value: vc.mutation(ՐՏ_49.prototype.set_doc_change_gen)
             },
             toggle_doc_saved: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_53.prototype.toggle_doc_saved)
+                value: vc.mutation(ՐՏ_49.prototype.toggle_doc_saved)
             },
             close: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_53.prototype.close)
+                value: vc.mutation(ՐՏ_49.prototype.close)
             },
             swap_doc: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_53.prototype.swap_doc)
+                value: vc.mutation(ՐՏ_49.prototype.swap_doc)
             },
             toggle_vim: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_53.prototype.toggle_vim)
+                value: vc.mutation(ՐՏ_49.prototype.toggle_vim)
             },
             set_error: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_53.prototype.set_error)
+                value: vc.mutation(ՐՏ_49.prototype.set_error)
             },
             clear_error: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_53.prototype.clear_error)
+                value: vc.mutation(ՐՏ_49.prototype.clear_error)
             },
             active_doc_num: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.getter(ՐՏ_53.prototype.active_doc_num)
+                value: vc.getter(ՐՏ_49.prototype.active_doc_num)
             }
         });
         ;
-    })(), ՐՏ_53);
-    var Store = (ՐՏ_54 = class Store extends RS_store {
+    })(), ՐՏ_49);
+    var Store = (ՐՏ_50 = class Store extends RS_store {
         constructor (root) {
             super();
             var self = this;
@@ -5480,7 +5326,7 @@ var ՐՏ_modules = {};
             return self.dispatch("open_by_id", fid, win_id);
         }
         open_by_id (fid, win_id, as_doc_num) {
-            var ՐՏ_55;
+            var ՐՏ_51;
             var self = this;
             var fs, info, content, doc_num;
             fs = self.root.api.fs;
@@ -5510,7 +5356,7 @@ var ՐՏ_modules = {};
                     create_cm_doc(doc_num, content, self.map_ftype(info.name));
                 }
             }
-            if (win_id && (as_doc_num || ((ՐՏ_55 = self.get("windows")[win_id].doc_num) !== doc_num && (typeof ՐՏ_55 !== "object" || !ՐՏ_eq(ՐՏ_55, doc_num))))) {
+            if (win_id && (as_doc_num || ((ՐՏ_51 = self.get("windows")[win_id].doc_num) !== doc_num && (typeof ՐՏ_51 !== "object" || !ՐՏ_eq(ՐՏ_51, doc_num))))) {
                 self.cm_windows[win_id].swapDoc(self.cm_docs[doc_num]);
                 self.cm_windows[win_id].focus();
                 self.commit("swap_doc", doc_num, win_id);
@@ -5518,10 +5364,10 @@ var ՐՏ_modules = {};
             return doc_num;
         }
         swap_doc (doc_num, win_id) {
-            var ՐՏ_56;
+            var ՐՏ_52;
             var self = this;
             win_id = win_id || self.get("active_window");
-            if (((ՐՏ_56 = self.get("windows")[win_id].doc_num) !== doc_num && (typeof ՐՏ_56 !== "object" || !ՐՏ_eq(ՐՏ_56, doc_num)))) {
+            if (((ՐՏ_52 = self.get("windows")[win_id].doc_num) !== doc_num && (typeof ՐՏ_52 !== "object" || !ՐՏ_eq(ՐՏ_52, doc_num)))) {
                 if (doc_num) {
                     self.cm_windows[win_id].swapDoc(self.cm_docs[doc_num]);
                     self.cm_windows[win_id].focus();
@@ -5592,7 +5438,7 @@ var ՐՏ_modules = {};
             return map_type[ext];
         }
         doc_num_by_fid (file_id) {
-            var ՐՏitr52, ՐՏidx52, ՐՏ_57;
+            var ՐՏitr52, ՐՏidx52, ՐՏ_53;
             var self = this;
             var docs, doc_num;
             if (!file_id) {
@@ -5602,7 +5448,7 @@ var ՐՏ_modules = {};
             ՐՏitr52 = ՐՏ_Iterable(docs);
             for (ՐՏidx52 = 0; ՐՏidx52 < ՐՏitr52.length; ՐՏidx52++) {
                 doc_num = ՐՏitr52[ՐՏidx52];
-                if (((ՐՏ_57 = docs[doc_num].id) === file_id || typeof ՐՏ_57 === "object" && ՐՏ_eq(ՐՏ_57, file_id))) {
+                if (((ՐՏ_53 = docs[doc_num].id) === file_id || typeof ՐՏ_53 === "object" && ՐՏ_eq(ՐՏ_53, file_id))) {
                     return doc_num;
                 }
             }
@@ -5622,75 +5468,75 @@ var ՐՏ_modules = {};
             return false;
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_54.prototype, {
+        Object.defineProperties(ՐՏ_50.prototype, {
             trim_space: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_54.prototype.trim_space)
+                value: vc.action(ՐՏ_50.prototype.trim_space)
             },
             reload: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_54.prototype.reload)
+                value: vc.action(ՐՏ_50.prototype.reload)
             },
             save_all: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_54.prototype.save_all))
+                value: vc.action(asyncer(ՐՏ_50.prototype.save_all))
             },
             save: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_54.prototype.save)
+                value: vc.action(ՐՏ_50.prototype.save)
             },
             mount_cm: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_54.prototype.mount_cm)
+                value: vc.action(ՐՏ_50.prototype.mount_cm)
             },
             close_all: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_54.prototype.close_all))
+                value: vc.action(asyncer(ՐՏ_50.prototype.close_all))
             },
             close: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_54.prototype.close))
+                value: vc.action(asyncer(ՐՏ_50.prototype.close))
             },
             open: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_54.prototype.open)
+                value: vc.action(ՐՏ_50.prototype.open)
             },
             open_by_id: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_54.prototype.open_by_id)
+                value: vc.action(ՐՏ_50.prototype.open_by_id)
             },
             swap_doc: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_54.prototype.swap_doc)
+                value: vc.action(ՐՏ_50.prototype.swap_doc)
             },
             toggle_vim: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_54.prototype.toggle_vim)
+                value: vc.action(ՐՏ_50.prototype.toggle_vim)
             },
             set_cursor: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_54.prototype.set_cursor)
+                value: vc.action(ՐՏ_50.prototype.set_cursor)
             },
             compile_active_doc: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_54.prototype.compile_active_doc)
+                value: vc.action(ՐՏ_50.prototype.compile_active_doc)
             }
         });
         ;
-    })(), ՐՏ_54);
+    })(), ՐՏ_50);
     if (__name__ === "__main__") {
     }
     ՐՏ_modules["store.editor"]["EDITOR_DEFSTATE"] = EDITOR_DEFSTATE;
@@ -5708,7 +5554,6 @@ var ՐՏ_modules = {};
     var __name__ = "store.explorer";
     var DEFSTATE, vc;
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue_n;
     var RS_store = ՐՏ_modules["asset.rs_vue"].RS_store;
     var RS_state_api = ՐՏ_modules["asset.rs_vue"].RS_state_api;
     
@@ -5742,7 +5587,7 @@ var ՐՏ_modules = {};
         basket: []
     };
     vc = new V_collector();
-    var State = (ՐՏ_58 = class State extends RS_state_api {
+    var State = (ՐՏ_54 = class State extends RS_state_api {
         constructor (vue, getter_factory, state) {
             super(vc, vue, state || DEFSTATE);
             var self = this;
@@ -5785,7 +5630,7 @@ var ՐՏ_modules = {};
             self.state.selected = {};
         }
         fix_basket () {
-            var ՐՏ_59, ՐՏ_60;
+            var ՐՏ_55, ՐՏ_56;
             var self = this;
             var fs, basket, b;
             fs = self.vm.rs_imports.get_fs()();
@@ -5793,7 +5638,7 @@ var ՐՏ_modules = {};
             b = basket.slice(1).filter(function(it) {
                 return fs.files[it] || fs.dirs[it];
             });
-            if (((ՐՏ_59 = b.length) !== (ՐՏ_60 = basket.length - 1) && (typeof ՐՏ_59 !== "object" || !ՐՏ_eq(ՐՏ_59, ՐՏ_60)))) {
+            if (((ՐՏ_55 = b.length) !== (ՐՏ_56 = basket.length - 1) && (typeof ՐՏ_55 !== "object" || !ՐՏ_eq(ՐՏ_55, ՐՏ_56)))) {
                 b.unshift(basket[0]);
                 self.commit("set_basket", b);
             }
@@ -5852,61 +5697,61 @@ var ՐՏ_modules = {};
             return inner;
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_58.prototype, {
+        Object.defineProperties(ՐՏ_54.prototype, {
             save_as: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.save_as)
+                value: vc.mutation(ՐՏ_54.prototype.save_as)
             },
             set_basket: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.set_basket)
+                value: vc.mutation(ՐՏ_54.prototype.set_basket)
             },
             set_dir: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.set_dir)
+                value: vc.mutation(ՐՏ_54.prototype.set_dir)
             },
             path_arr: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.getter(ՐՏ_58.prototype.path_arr)
+                value: vc.getter(ՐՏ_54.prototype.path_arr)
             },
             toggle_select: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.toggle_select)
+                value: vc.mutation(ՐՏ_54.prototype.toggle_select)
             },
             clear_selected: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.clear_selected)
+                value: vc.mutation(ՐՏ_54.prototype.clear_selected)
             },
             fix_basket: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.fix_basket)
+                value: vc.mutation(ՐՏ_54.prototype.fix_basket)
             },
             path: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.getter(ՐՏ_58.prototype.path)
+                value: vc.getter(ՐՏ_54.prototype.path)
             },
             list_dir: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.getter(ՐՏ_58.prototype.list_dir)
+                value: vc.getter(ՐՏ_54.prototype.list_dir)
             },
             row_actions: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.getter(ՐՏ_58.prototype.row_actions)
+                value: vc.getter(ՐՏ_54.prototype.row_actions)
             }
         });
         ;
-    })(), ՐՏ_58);
-    var Store = (ՐՏ_61 = class Store extends RS_store {
+    })(), ՐՏ_54);
+    var Store = (ՐՏ_57 = class Store extends RS_store {
         constructor (root) {
             super();
             var self = this;
@@ -6013,20 +5858,20 @@ var ՐՏ_modules = {};
             ՐՏ_print(a, payload);
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_61.prototype, {
+        Object.defineProperties(ՐՏ_57.prototype, {
             click_item: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_61.prototype.click_item)
+                value: vc.action(ՐՏ_57.prototype.click_item)
             },
             doit: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_61.prototype.doit)
+                value: vc.action(ՐՏ_57.prototype.doit)
             }
         });
         ;
-    })(), ՐՏ_61);
+    })(), ՐՏ_57);
     if (__name__ === "__main__") {
     }
     ՐՏ_modules["store.explorer"]["DEFSTATE"] = DEFSTATE;
@@ -6308,7 +6153,7 @@ var ՐՏ_modules = {};
         return ret;
     }
     vc = new V_collector();
-    var State = (ՐՏ_62 = class State extends RS_state_api {
+    var State = (ՐՏ_58 = class State extends RS_state_api {
         constructor (vue, getter_factory, state) {
             super(vc, vue, state || default_state());
             var self = this;
@@ -6364,56 +6209,56 @@ var ՐՏ_modules = {};
             self.state.flash.status = status;
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_62.prototype, {
+        Object.defineProperties(ՐՏ_58.prototype, {
             set_modal_inner: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_62.prototype.set_modal_inner)
+                value: vc.mutation(ՐՏ_58.prototype.set_modal_inner)
             },
             compile_error: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_62.prototype.compile_error)
+                value: vc.mutation(ՐՏ_58.prototype.compile_error)
             },
             set_modal_promise: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_62.prototype.set_modal_promise)
+                value: vc.mutation(ՐՏ_58.prototype.set_modal_promise)
             },
             set_modal_promise_ok: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_62.prototype.set_modal_promise_ok)
+                value: vc.mutation(ՐՏ_58.prototype.set_modal_promise_ok)
             },
             toggle_modal: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_62.prototype.toggle_modal)
+                value: vc.mutation(ՐՏ_58.prototype.toggle_modal)
             },
             toggle_busy: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_62.prototype.toggle_busy)
+                value: vc.mutation(ՐՏ_58.prototype.toggle_busy)
             },
             toggle_explorer: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_62.prototype.toggle_explorer)
+                value: vc.mutation(ՐՏ_58.prototype.toggle_explorer)
             },
             set_w3p_app: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_62.prototype.set_w3p_app)
+                value: vc.mutation(ՐՏ_58.prototype.set_w3p_app)
             },
             flash: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_62.prototype.flash)
+                value: vc.mutation(ՐՏ_58.prototype.flash)
             }
         });
         ;
-    })(), ՐՏ_62);
-    var Store = (ՐՏ_63 = class Store extends RS_store {
+    })(), ՐՏ_58);
+    var Store = (ՐՏ_59 = class Store extends RS_store {
         constructor (rs_req) {
             super();
             var self = this;
@@ -6604,50 +6449,50 @@ var ՐՏ_modules = {};
             return compiled;
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_63.prototype, {
+        Object.defineProperties(ՐՏ_59.prototype, {
             w3p_app_list: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_63.prototype.w3p_app_list))
+                value: vc.action(asyncer(ՐՏ_59.prototype.w3p_app_list))
             },
             menu_click: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_63.prototype.menu_click))
+                value: vc.action(asyncer(ՐՏ_59.prototype.menu_click))
             },
             load_fs_from_srv: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_63.prototype.load_fs_from_srv))
+                value: vc.action(asyncer(ՐՏ_59.prototype.load_fs_from_srv))
             },
             load_fs: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_63.prototype.load_fs)
+                value: vc.action(ՐՏ_59.prototype.load_fs)
             },
             start_modal: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_63.prototype.start_modal)
+                value: vc.action(ՐՏ_59.prototype.start_modal)
             },
             close_modal: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_63.prototype.close_modal)
+                value: vc.action(ՐՏ_59.prototype.close_modal)
             },
             select_app: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_63.prototype.select_app))
+                value: vc.action(asyncer(ՐՏ_59.prototype.select_app))
             },
             compile: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_63.prototype.compile)
+                value: vc.action(ՐՏ_59.prototype.compile)
             }
         });
         ;
-    })(), ՐՏ_63);
+    })(), ՐՏ_59);
     if (__name__ === "__main__") {
     }
     ՐՏ_modules["store.root"]["vc"] = vc;
@@ -6663,13 +6508,13 @@ var ՐՏ_modules = {};
 
     var __name__ = "__main__";
 
-    var ՐՏ_64;
+    var ՐՏ_60;
     var app_templ, vc;
     app_templ = "\n<div>\n    <layout>\n        <div  style = 'width:100%; padding: 0 10px;'>\n            <modal></modal>\n            <div  v-show = 'show_explorer' class = 'explorer'>\n                <folder_content></folder_content>\n            </div>\n            <editor></editor>\n        </div>\n    </layout>\n</div>\n";
     var v_meth = ՐՏ_modules["asset.rs_vue"].v_meth;
     var v_computed = ՐՏ_modules["asset.rs_vue"].v_computed;
     var v_watch = ՐՏ_modules["asset.rs_vue"].v_watch;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue_n;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
     
     var common = ՐՏ_modules["asset.common"];
@@ -6695,7 +6540,7 @@ var ՐՏ_modules = {};
     };
     window.store = new Store(rs_req);
     vc = new V_collector();
-    var App = (ՐՏ_64 = class App extends RS_vue {
+    var App = (ՐՏ_60 = class App extends RS_vue {
         constructor () {
             super(vc);
             var self = this;
@@ -6731,15 +6576,15 @@ var ՐՏ_modules = {};
             }
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_64.prototype, {
+        Object.defineProperties(ՐՏ_60.prototype, {
             mounted: {
                 enumerable: false, 
                 writable: true, 
-                value: common.asyncer(ՐՏ_64.prototype.mounted)
+                value: common.asyncer(ՐՏ_60.prototype.mounted)
             }
         });
         ;
-    })(), ՐՏ_64);
+    })(), ՐՏ_60);
     exports.start = function(el) {
         var app;
         app = new App();

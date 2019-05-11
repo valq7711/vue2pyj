@@ -1,12 +1,6 @@
 (function(){
 "use strict";
-var ՐՏ_5;
-function ՐՏ_in(val, arr) {
-    if (typeof arr.indexOf === "function") {
-        return arr.indexOf(val) !== -1;
-    }
-    return arr.hasOwnProperty(val);
-}
+var ՐՏ_1;
 function ՐՏ_Iterable(iterable) {
     var tmp;
     if (iterable.constructor === [].constructor || iterable.constructor === "".constructor || (tmp = Array.prototype.slice.call(iterable)).length) {
@@ -296,34 +290,6 @@ var ՐՏ_modules = {};
         document.body.removeChild(el);
         window.URL.revokeObjectURL(blob);
     }
-    function format_num(format, num) {
-        var ՐՏ_1, ՐՏ_2;
-        var sign_zer_dig, flt_num, sign, zer, dot_idx;
-        sign_zer_dig = /^%?(\+)?(\d+)?\.(\d+)?f$/.exec(format);
-        if (sign_zer_dig) {
-            flt_num = parseFloat(num);
-            sign = flt_num < 0 ? "-" : sign_zer_dig[1] && flt_num > 0 ? "+" : "";
-            flt_num = Math.abs(flt_num);
-            if (sign_zer_dig[3]) {
-                flt_num = flt_num.toFixed(parseInt(sign_zer_dig[3]));
-            }
-            if (sign_zer_dig[2]) {
-                zer = parseInt(sign_zer_dig[2]);
-                flt_num = flt_num.toString();
-                dot_idx = flt_num.indexOf(".");
-                dot_idx = (dot_idx !== (ՐՏ_1 = -1) && (typeof dot_idx !== "object" || !ՐՏ_eq(dot_idx, ՐՏ_1))) ? dot_idx : flt_num.length;
-                if ((dot_idx !== (ՐՏ_2 = -1) && (typeof dot_idx !== "object" || !ՐՏ_eq(dot_idx, ՐՏ_2)))) {
-                    if (zer - dot_idx > 0) {
-                        flt_num = "0".repeat(zer - dot_idx) + flt_num;
-                    }
-                }
-            }
-            flt_num = sign + flt_num;
-            return flt_num;
-        } else {
-            throw new Error("bad format: " + format);
-        }
-    }
     function SF(text, props) {
         function replacer(str_, p) {
             var t, p_chain;
@@ -338,125 +304,6 @@ var ՐՏ_modules = {};
             return props[p];
         }
         return text.replace(/\$\{ *(.+?) *\}/g, replacer);
-    }
-    function _SF(s, args) {
-        var splitter, arr, cntr, i, name_format;
-        splitter = /(%%)|(%(?:\([a-zA-Z0-9_.]+\))?(?:(?:s)|(?:\+?\d*\.\d*f)))/;
-        arr = s.split(splitter);
-        cntr = 0;
-        for (i = 0; i < arr.length; i++) {
-            if (arr[i] && arr[i].startsWith("%")) {
-                if (arr[i] === "%%") {
-                    arr[i] = "%";
-                } else if (arr[i] === "%s") {
-                    arr[i] = args[cntr];
-                    ++cntr;
-                } else if (arr[i].startsWith("%(")) {
-                    name_format = /%\(([a-zA-Z0-9_.]+)\)(s|\+?\d*\.\d*f)/.exec(arr[i]);
-                    if (name_format[2] === "s") {
-                        arr[i] = args[name_format[1]];
-                    } else {
-                        arr[i] = format_num(name_format[2], args[name_format[1]]);
-                    }
-                } else if (/%(\+)?(\d+)?\.(\d+)?f/.test(arr[i])) {
-                    arr[i] = format_num(arr[i], args[cntr]);
-                    ++cntr;
-                } else {
-                    throw new Error("bad format: " + arr[i]);
-                }
-            }
-        }
-        return arr.join("");
-    }
-    class Drag_listener {
-        constructor (catcher, debounce) {
-            var self = this;
-            self.catcher = catcher;
-            self.x0 = 0;
-            self.y0 = 0;
-            self.dx = 0;
-            self.dy = 0;
-            self.vc = null;
-            self.listeners = {};
-            self.debounce = debounce || 50;
-        }
-        get_mousedn_listener () {
-            var self = this;
-            function _inner_(e) {
-                var listeners;
-                self.vc = this;
-                self.x0 = e.clientX;
-                self.y0 = e.clientY;
-                if (!self.catcher) {
-                    self.catcher = function(what, e, args) {
-                        self.vc.$emit(what, e, args);
-                    };
-                }
-                if (!(ՐՏ_in("move", self.listeners))) {
-                    self.listeners = {
-                        move: self.mousemove(),
-                        up: self.mouseup()
-                    };
-                }
-                listeners = self.listeners;
-                document.addEventListener("mousemove", listeners.move, false);
-                document.addEventListener("mouseup", listeners.up, false);
-                e.stopPropagation();
-                e.preventDefault();
-                self.catcher("drag_start", e, {
-                    x0: self.x0,
-                    y0: self.y0,
-                    vc: self.vc
-                });
-            }
-            self.listeners.dn = _inner_;
-            return _inner_;
-        }
-        mousemove () {
-            var self = this;
-            function _inner_(e) {
-                var ՐՏ_3, ՐՏ_4;
-                e.stopPropagation();
-                e.preventDefault();
-                function process_move() {
-                    self.dx = e.clientX - self.x0;
-                    self.dy = e.clientY - self.y0;
-                    self.catcher("drag_move", e, {
-                        dx: self.dx,
-                        dy: self.dy,
-                        vc: self.vc
-                    });
-                    _inner_.move_fired = true;
-                }
-                if (((ՐՏ_3 = _inner_.move_fired) === (ՐՏ_4 = void 0) || typeof ՐՏ_3 === "object" && ՐՏ_eq(ՐՏ_3, ՐՏ_4))) {
-                    process_move();
-                } else if (_inner_.move_fired) {
-                    _inner_.move_fired = false;
-                    setTimeout(process_move, self.debounce);
-                }
-            }
-            return _inner_;
-        }
-        mouseup () {
-            var self = this;
-            function _inner_(e) {
-                document.removeEventListener("mousemove", self.listeners.move);
-                document.removeEventListener("mouseup", self.listeners.up);
-                e.stopPropagation();
-                e.preventDefault();
-                self.catcher("drag_stop", e, {
-                    dx: self.dx,
-                    dy: self.dy,
-                    vc: self.vc
-                });
-            }
-            return _inner_;
-        }
-        static get_listener (catcher, debounce) {
-            var obj;
-            obj = new Drag_listener(catcher, debounce);
-            return obj.get_mousedn_listener();
-        }
     }
     function make_drag_listener(catcher, debounce) {
         var ctx;
@@ -551,13 +398,7 @@ var ՐՏ_modules = {};
 
     ՐՏ_modules["asset.common"]["download"] = download;
 
-    ՐՏ_modules["asset.common"]["format_num"] = format_num;
-
     ՐՏ_modules["asset.common"]["SF"] = SF;
-
-    ՐՏ_modules["asset.common"]["_SF"] = _SF;
-
-    ՐՏ_modules["asset.common"]["Drag_listener"] = Drag_listener;
 
     ՐՏ_modules["asset.common"]["make_drag_listener"] = make_drag_listener;
 
@@ -598,7 +439,7 @@ var ՐՏ_modules = {};
         };
         return ret;
     }
-    var RS_require = (ՐՏ_5 = class RS_require {
+    var RS_require = (ՐՏ_1 = class RS_require {
         constructor (cfg) {
             var self = this;
             var define;
@@ -648,8 +489,8 @@ var ՐՏ_modules = {};
                 }
             }
             if (self.load_stack.find(function(it) {
-                var ՐՏ_6;
-                return ((ՐՏ_6 = it.name) === name || typeof ՐՏ_6 === "object" && ՐՏ_eq(ՐՏ_6, name));
+                var ՐՏ_2;
+                return ((ՐՏ_2 = it.name) === name || typeof ՐՏ_2 === "object" && ՐՏ_eq(ՐՏ_2, name));
             })) {
                 throw new Error("Circular dependency: " + name + " and " + requester);
             }
@@ -697,20 +538,20 @@ var ՐՏ_modules = {};
             return self.modules[name];
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_5.prototype, {
+        Object.defineProperties(ՐՏ_1.prototype, {
             load_amd: {
                 enumerable: false, 
                 writable: true, 
-                value: prom(ՐՏ_5.prototype.load_amd)
+                value: prom(ՐՏ_1.prototype.load_amd)
             },
             load_amd_list: {
                 enumerable: false, 
                 writable: true, 
-                value: asyncer(ՐՏ_5.prototype.load_amd_list)
+                value: asyncer(ՐՏ_1.prototype.load_amd_list)
             }
         });
         ;
-    })(), ՐՏ_5);
+    })(), ՐՏ_1);
     ՐՏ_modules["asset.rs_require"]["doc_ready"] = doc_ready;
 
     ՐՏ_modules["asset.rs_require"]["prom"] = prom;
