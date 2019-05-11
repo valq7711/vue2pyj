@@ -21,7 +21,7 @@ v-def templ_menu:
 
 v-pyj:
 +++
-from asset.rs_vue import RS_vue_n as RS_vue, V_collector
+from asset.rs_vue import RS_vue, V_collector
 from asset.common import SF
 
 vc = V_collector()

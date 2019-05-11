@@ -143,7 +143,7 @@ v-def templ_folder_content:
 
 v-pyj:
 +++
-from asset.rs_vue import v_meth, v_computed, v_watch, RS_vue_n, V_collector
+from asset.rs_vue import v_meth, v_computed, v_watch, RS_vue, V_collector
 
 """
 @external
@@ -165,9 +165,9 @@ def it_by_path(obj, path):
 
 
 vc = V_collector()
-class Folder_content(RS_vue_n):
+class Folder_content(RS_vue):
     def __init__(self):
-        RS_vue_n.__init__(self, vc)
+        super(vc)
         self.delimiters =  ['${', '}']
         self.template = templ_folder_content
         self.map_store = {

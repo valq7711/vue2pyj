@@ -34,7 +34,7 @@ v-def templ:
 
 v-pyj:
 +++
-from asset.rs_vue import V_collector, RS_vue_n as RS_vue
+from asset.rs_vue import V_collector, RS_vue
 
 import components.menu as menu
 import components.flash as flash

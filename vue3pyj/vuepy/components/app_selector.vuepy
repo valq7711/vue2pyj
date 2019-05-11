@@ -29,10 +29,10 @@ v-def templ:
             button(type = 'button', class = 'blue', @click = '$emit("close", "cancel")'):'Cancel'
 v-pyj:
 +++
-from asset.rs_vue import v_meth, v_computed, v_watch, RS_vue_n, V_collector
+from asset.rs_vue import v_meth, v_computed, v_watch, RS_vue, V_collector
 
 vc = V_collector()
-class App_selector(RS_vue_n):
+class App_selector(RS_vue):
     def __init__(self):
         super(vc)
         self.template = templ

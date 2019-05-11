@@ -12,7 +12,7 @@ map_store = {
 }
 '''
 #import server
-from asset.rs_vue import V_collector, RS_vue_n as RS_vue, RS_store, RS_state_api
+from asset.rs_vue import V_collector,  RS_store, RS_state_api
 from asset.common import asyncer
 import asset.cm_vuepy as cm_vuepy, asset.cm_rapydscript as cm_rapydscript
 

@@ -101,7 +101,7 @@ class V_collector:
     def mutation(self, name_or_fun): return self._reg_as('_mutations', name_or_fun)
     def action(self, name_or_fun): return self._reg_as('_actions', name_or_fun)
 
-class RS_vue_n:
+class RS_vue:
     def __init__(self, v_collector):
         self.props = {}
         self.data = self._init_data

@@ -18,10 +18,10 @@ v-def templ:
 
 v-pyj:
 +++
-from asset.rs_vue import v_meth, v_computed, v_watch, RS_vue_n, V_collector
+from asset.rs_vue import v_meth, v_computed, v_watch, RS_vue, V_collector
 
 vc = V_collector()
-class Confirm(RS_vue_n):
+class Confirm(RS_vue):
     def __init__(self):
         super(vc)
         self.template = templ

@@ -1,0 +1,17 @@
+# index.js
+import asset.rs_require as rs_require
+import load_js
+window.onbeforeunload = def(): return 'hi!';
+
+def init():
+    js_root_dir= window.location.pathname.split('/', 2).join('/') + '/static/js/'
+    window.rs_req = rs_req = rs_require.RS_require({js_root_dir: js_root_dir}) # exposes define()
+    load_js.load(rs_req)
+    .then(def():
+          rs_req.load_amd('app', '')
+          .then(def(app):
+                app.start('#app')
+                print('Done!!!')
+           )
+     )
+init()
