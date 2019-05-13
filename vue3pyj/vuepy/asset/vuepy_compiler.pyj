@@ -120,6 +120,7 @@ def vuepy_compile(s, fp, fs, opt):
     if prec.v_pyj:
         v_js = prec.compile_v_pyj(opt.compilers['rapydscript'])
 
+    LAST_VUEPY_PREC = {} # required to avoid raise from maybe_vuepy_error 
     if prec.nodes_to_compile:
         for it in prec.nodes_to_compile:
             if (compiler = opt.compilers[it.compiler]):
