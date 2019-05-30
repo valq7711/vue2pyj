@@ -19,7 +19,7 @@ To compile it do the following:
 7. Now try [todo/default/index](http://127.0.0.1:8000/todo/default/index)
 
 
-## Understanding veupy files
+## Understanding vuepy files
 Vuepy file could consist of several parts (all parts are optional): 
 ```python
 # vuepy/foo.vuepy
