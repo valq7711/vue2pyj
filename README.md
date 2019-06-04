@@ -101,7 +101,7 @@ v-pyj:
         @vc.meth
         def edit_item(self, item_id):
             # self == this == vue-component instance
-            item = self.items.find(def(it): return ti.id == item_id;) 
+            item = self.items.find(def(it): return it.id == item_id;) 
             ...
             
         @vc.computed
