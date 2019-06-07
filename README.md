@@ -142,5 +142,114 @@ v-pyj:
     ...
     app = new Vue(App())
 ```
+## About a state management
+Vuex is cool, but if you like the freedom of experiment you can try my way.  
+The main goals of state management are:
+- encapsulate data and methods 
+- provide convenient access to the data/methods from any component  
+
+So, the idea is very similar to Vuex and is based on 2 classes:
+- RS_state_api - holds the data, getters and mutations
+- RS_store - wraps around RS_state_api, holds actions and other functionality what you need   
+
+
+Here is example:
+```python
+#store/root.pyj
+from asset.rs_vue import RS_state_api, RS_store, V_collector
+from asset.common import asyncer
+
+vc = V_collector()
+class State(RS_state_api):
+    def __init__(self, vue):
+        state = {
+            count: 0
+        }
+        super(vc, vue, state)  # - does stuff like: self.vm = new Vue({data: state, computed: vc._getters}) 
+    
+    # you can expose any utility regular methods that could be used by mutations/getters
+    def do_increment(self):
+        # self.state == self.vm.state
+        self.state.count += 1 
+    
+    @vc.mutation
+    def increment(self):
+        self.do_increment()
+    
+    @vc.getter
+    def double_count(vm):
+        return vm.state.count * 2
+        # !important note:
+        # gettes run in self.vm context
+        # vm == self.vm == Vue-instance
+        # if you need to access to `self`(i.e. RS_state_api-instance) 
+        # you should take care of this yourself
+        # it could be done, for example, just by `self.vm.myself = self` at __init__()
+        # or there is another safer way (passing extra options): super(vc, vue, state, {myself: self})
+        # in the latter case it will be stored in vm.$options.myself
+        
+class Store(RS_store):
+    def __init__(self):
+        self.state_api = State(self.vue)  
+        self.actions = vc._actions
+        # self.vue is assigned during Vue.use(Store)
+    
+    @vc.action
+    @asyncer
+    def increment(self):
+        def timer(ok):
+            setTimeout(def(): ok();, 1000)
+        yield Promise(timer)
+        self.commit('increment')
+        
+#=========================== END of store/root.pyj =====================
+
+#app.vuepy
+'<!DOCTYPE html>'
+html:
+    head:
+        title: 'Vuepy store example'
+    body:
+        div(id = 'app'):
+    script(src = "{{=URL('static', 'js/vue.js')}}"):
+    script(src = "{{=URL('static', 'js/app.js')}}"):
+
+v-def templ:
+    div:
+        div: 'count: {{count}}'
+        div: 'countx2 : {{countx2}}'
+        div:
+            button(@click = 'increment'): '+1'
+            button(@click = 'lazy_increment'): '+1 after 1 second'    
+
+v-pyj:
+    from asset.rs_vue import RS_vue
+    from store.root import Store
+    
+    Vue.use(Store)
+    window.store = Store() # for play in the console
+    class App(RS_vue):
+        def __init__(self):
+            self.template = templ
+            self.store = window.store 
+            self.map_store = {
+                count: 'count',
+                countx2: 'double_count',
+                increment: 'increment~',
+                lazy_increment: 'increment*',
+            }
+            
+        def _init_data(self):
+            return {}    
+
+
+    new Vue(App()).$mount('#app')
+    # you can try in the console:
+    # store.commit('increment')
+    # store.dispatch('increment')
+    # store.get('count')
+    # store.get('double_count')
+   
+```
 
 
