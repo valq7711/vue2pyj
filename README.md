@@ -183,10 +183,7 @@ class State(RS_state_api):
         # gettes run in self.vm context
         # vm == self.vm == Vue-instance
         # if you need to access to `self`(i.e. RS_state_api-instance) 
-        # you should take care of this yourself
-        # it could be done, for example, just by `self.vm.myself = self` at __init__()
-        # or there is another safer way (passing extra options): super(vc, vue, state, {myself: self})
-        # in the latter case it will be stored in vm.$options.myself
+        # you can find it in vm.rs_state_api (assigned during super-call)
         
 class Store(RS_store):
     def __init__(self):
