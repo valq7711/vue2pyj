@@ -38,7 +38,7 @@ v-def foo_templ:
   div:
       vtitle(title = '...'):
       ul:
-          li(v-for = 'it in items'): '${it}'
+          li(v-for = 'it in items'): '{{it}}'
   ...
   
 # This is v-pyj part (regular rapydscript) - will be compiled to static/js/foo.js    
@@ -58,7 +58,7 @@ v-pyj:
     import title # - Note, that we just import title.vuepy, title.html/js files will not be created     
     vopt = {
         template: foo_templ, 
-        delimiters:['${','}'],
+        delimiters:['{{','}}'],
         data:{items[...]},
         el:'#app',
         components:{'vtitle': title.vopt}
