@@ -1,19 +1,41 @@
 # -*- coding: utf-8 -*-
 import os, re
 import sys
-from gluon.utils import md5_hash
+import hashlib
 from gluon.tools import Storage
+import io, shutil
 
+CDIR = os.path.dirname(__file__)
 LAST_ID = None
 FILE_MASK_REX = re.compile('(.(?!\.min))+.\.(js|py|css|html|vuepy|pyj)$', flags= re.I)
+PY2 = sys.version_info[0] == 2
+
+def to_bytes(obj, charset='utf-8', errors='strict'):
+        if obj is None:
+            return None
+        if isinstance(obj, (bytes, bytearray)):
+            return bytes(obj)
+        if isinstance(obj, str):
+            return obj.encode(charset, errors)
+        raise TypeError('Expected bytes')
+
+def md5_hash(text):
+    """Generate an md5 hash with the given text."""
+    return hashlib.md5(to_bytes(text)).hexdigest()
 
 def get_id():
     global LAST_ID
     LAST_ID += 1
     return '0' if LAST_ID == 0 else  'ID%s' % LAST_ID
 
+def safe_open(fp):
+    if PY2 :
+        return open(fp, 'rb')
+    else:
+        return open(fp, 'r', encoding="utf8")
+
 def safe_read(fp):
-    with open(fp, 'r') as f:
+    with safe_open(fp) as f:
         ret = f.read()
     return ret
 
@@ -24,15 +46,14 @@ def get_file(fp, parent_id ):
                 name = os.path.split(fp)[1],
                 parent = parent_id,
                 content = content,
-                ctime = long(stat.st_ctime * 1000),
-                mtime = long(stat.st_mtime * 1000),
+                ctime = int(stat.st_ctime * 1000),
+                mtime = int(stat.st_mtime * 1000),
                 md5_hash = md5_hash(content)
     )
     return ret
 
 def get_dir(pth_to_dir,  parent_id, files, dirs, dir_list = None,  file_mask = FILE_MASK_REX ):
     # {id:0,  name: '', parent: None,  content: []}
-    dir_list = dir_list
     ret = dict(id = get_id(),
                 name = os.path.split(pth_to_dir)[1],
                 parent = parent_id,
@@ -46,10 +67,13 @@ def get_dir(pth_to_dir,  parent_id, files, dirs, dir_list = None,  file_mask = F
                 ret['content'].append(fl['id'])
             else:
                 continue
-        elif not dir_list or it in dir_list.keys():
-            d = get_dir(fp,  ret['id'], files, dirs, dir_list and dir_list[it], file_mask)
-            dirs[d['id']] = d
-            ret['content'].append(d['id'])
+        elif dir_list != None:
+            sub_dir_list = dir_list == '*' and '*' or \
+                       dir_list.get(it, dir_list.get('*') and '*')
+            if sub_dir_list != None:
+                d = get_dir(fp,  ret['id'], files, dirs, sub_dir_list, file_mask)
+                dirs[d['id']] = d
+                ret['content'].append(d['id'])
     return ret
 
 def dir_to_fs(root_d, dir_list = None,file_mask = FILE_MASK_REX):
@@ -87,9 +111,20 @@ def write_file(fdata, app_folder):
     ret = validate_fdata(fdata, app_folder)
     if ret.error:
         return ret
-    content =  unicode.encode(fdata.get('content', ''), 'utf8')
+    content =  fdata.get('content', '')
+    if PY2 and isinstance(content, basestring):
+        content = content.encode('utf8')
+    elif isinstance(content, str):
+        pass
+    elif hasattr(content, 'read'):
+        content = content.read()
+    elif hasattr(content, 'file'):
+        buffer = io.BytesIO()
+        shutil.copyfileobj(content.file, buffer)
+        content = buffer.getvalue()
+        buffer.close()
     with open(ret.os_path, 'wb') as fl:
-        fl.write(content or '')
+        fl.write(content or b'')
     ret.md5_hash = md5_hash(content)
     return ret
 

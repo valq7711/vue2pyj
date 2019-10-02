@@ -1,98 +1,131 @@
 # -*- coding: utf-8 -*-
-# this file is released under public domain and you can use without limitations
-
-#########################################################################
-## This is a sample controller
-## - index is the default action of any application
-## - user is required for authentication and authorization
-## - download is for downloading files uploaded in the db (does streaming)
-#########################################################################
+from gluon.custom_import import track_changes; track_changes(True)
 import fs2json
 import os
+import socket
+import copy
+import gluon.fileutils
 
-if not request.is_local:
-    raise HTTP(403, 'insecure connection')
+response.static_version = '0.0.1'
+response.static_version_urls = True
+
+http_host = request.env.http_host.split(':')[0]
+remote_addr = request.env.remote_addr
+try:
+    hosts = (http_host, socket.gethostname(),
+             socket.gethostbyname(http_host),
+             '::1', '127.0.0.1', '::ffff:127.0.0.1')
+except:
+    hosts = (http_host, )
+
+
+if request.is_https:
+    session.secure()
+elif (remote_addr not in hosts) and (remote_addr != "127.0.0.1"):
+    raise HTTP(403,'Insecure channel')
+
+session.forget()
+
+def secure(f):
+    def guard(*args, **kw):
+        if gluon.fileutils.check_credentials(request):
+            return f(*args, **kw)
+        else:
+            raise HTTP(403, 'not authorized')
+    guard.x_name = f.__name__
+    return guard
+
+
+APPS_FOLDER = os.path.split(os.path.normpath(request.folder))[0]
+API = dict()
+def json_api(f):
+    API[getattr(f, 'x_name', f.__name__)] = f
+    return f
 
 def index():
+    if not gluon.fileutils.check_credentials(request):
+        redirect(URL('admin', 'default', 'index',
+                     vars = dict(send = URL('index')) )
+        )
     response.delimiters = ('[[', ']]')
     response.view = 'index.html'
     return dict(web23py='web2py', title = 'Vue2pyj')
 
-APPS_FOLDER = os.path.split(os.path.normpath(request.folder))[0]
+@json_api
+def login(password = None, cb = None):
+    if gluon.fileutils.check_credentials(request):
+        return dict(user = True)
+    if password:
+        pwd = str(password) # may be unicode
+        cb_url = URL('api', args = ['login'], vars = dict(cb='ok'))
+        redirect(
+            URL('admin', 'default', 'index',
+                vars = dict(password = pwd, send = cb_url ))
+        )
+    elif cb == 'ok':
+        return dict(user = True)
 
-@service.json
+@json_api
+@secure
+def try_connect():
+    return dict(message = 'ok')
+
+@json_api
+@secure
+def logout():
+    redirect(URL('admin', 'default', 'logout'))
+    return dict(message = 'ok')
+
+
+@json_api
+@secure
 def app_list():
-    return dict(app_list = next(os.walk(APPS_FOLDER))[1])
+    return dict(app_list = [app for app in next(os.walk(APPS_FOLDER))[1] \
+                            if not app.startswith('__')] )
 
-@service.json
-def list_apps():
-    return next(os.walk(APPS_FOLDER))[1]
 
-@service.json
+@json_api
 def cm_themes():
     cm_themes_dir = os.path.join(request.folder, 'static/js/codemirror/theme')
     return [ fname for fname in os.listdir(cm_themes_dir) if fname.endswith('.css')]
 
-@service.json
+@json_api
+@secure
 def get_fs(w23p_app = None):
     dir_list = {
-        'controllers':None,
+        'controllers':'*',
         'static': {
-            'js': None,
-            'css': None,
+            'js': {},
+            'css': '*',
         },
-        'modules':None,
-        'models':None,
-        'views':None,
-        'vuepy':None,
+        'modules':'*',
+        'models':'*',
+        'views':'*',
+        'vuepy':'*',
     }
     app_folder = os.path.join(APPS_FOLDER, w23p_app) if w23p_app else os.path.normpath(request.folder)
     ret = fs2json.dir_to_fs(app_folder, dir_list)
     return ret
 
-@service.json
-def write_file(fdata):
+@json_api
+@secure
+def write_file(**fdata):
     w23p_app = fdata.get('w23p_app')
-    app_folder = os.path.join(APPS_FOLDER, w23p_app) if w23p_app else os.path.normpath(request.folder)
+    app_folder = os.path.join(APPS_FOLDER, w23p_app)
     ret = fs2json.write_file(fdata, app_folder)
     return dict(ret)
 
-
-@service.json
+@json_api
+@secure
 def del_file(fdata):
     w23p_app = fdata.get('w23p_app')
-    app_folder = os.path.join(APPS_FOLDER, w23p_app) if w23p_app else os.path.normpath(request.folder)
+    app_folder = os.path.join(APPS_FOLDER, w23p_app)
     ret = fs2json.del_file(fdata, app_folder)
     return dict(ret)
 
-
-
-def user():
-    """
-    exposes:
-    http://..../[app]/default/user/login
-    http://..../[app]/default/user/logout
-    http://..../[app]/default/user/register
-    http://..../[app]/default/user/profile
-    http://..../[app]/default/user/retrieve_password
-    http://..../[app]/default/user/change_password
-    http://..../[app]/default/user/manage_users (requires membership in
-    http://..../[app]/default/user/bulk_register
-    use @auth.requires_login()
-        @auth.requires_membership('group name')
-        @auth.requires_permission('read','table name',record_id)
-    to decorate functions that need access control
-    """
-    return dict(form=auth())
-
-
-def call():
-    """
-    exposes services. for example:
-    http://..../[app]/default/call/jsonrpc
-    decorate with @services.jsonrpc the functions to expose
-    supports xml, json, xmlrpc, jsonrpc, amfrpc, rss, csv
-    """
-    return service()
-
+def api():
+    apif = API.get(request.args(0))
+    if apif:
+        return response.json(apif(*request.args[1:], **request.vars))
+    raise HTTP(404)
 

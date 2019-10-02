@@ -168,6 +168,7 @@ ul.doc_tabs{
     height: 100vh;
     background-color: rgba(200,200,200,0.8);
     z-index: 1001;
+    color:black;
 }
 /*---------< components/confirm.vuepy >-------------*/
 .confirm {

@@ -2,7 +2,7 @@ define(["vue","codemirror/lib/codemirror","rapydscript_web","axios.min"],functio
 var exports = {};
 (function(){
 "use strict";
-var ՐՏ_1, ՐՏ_2, ՐՏ_3, ՐՏ_6, ՐՏ_7, ՐՏ_8, ՐՏ_9, ՐՏ_24, ՐՏ_49, ՐՏ_50, ՐՏ_54, ՐՏ_57, ՐՏ_58, ՐՏ_59;
+var ՐՏ_1, ՐՏ_2, ՐՏ_17, ՐՏ_42, ՐՏ_43, ՐՏ_44, ՐՏ_45, ՐՏ_46, ՐՏ_49, ՐՏ_50, ՐՏ_51, ՐՏ_52, ՐՏ_56, ՐՏ_59, ՐՏ_60, ՐՏ_61;
 function enumerate(item) {
     var arr, iter, i;
     arr = [];
@@ -12,9 +12,16 @@ function enumerate(item) {
     }
     return arr;
 }
+function ՐՏ_extends(child, parent) {
+    child.prototype = Object.create(parent.prototype);
+    child.prototype.__base__ = parent;
+    child.prototype.constructor = child;
+}
 function ՐՏ_in(val, arr) {
     if (typeof arr.indexOf === "function") {
         return arr.indexOf(val) !== -1;
+    } else if (typeof arr.has === "function") {
+        return arr.has(val);
     }
     return arr.hasOwnProperty(val);
 }
@@ -23,12 +30,18 @@ function ՐՏ_Iterable(iterable) {
     if (iterable.constructor === [].constructor || iterable.constructor === "".constructor || (tmp = Array.prototype.slice.call(iterable)).length) {
         return tmp || iterable;
     }
+    if (Set && iterable.constructor === Set) {
+        return Array.from(iterable);
+    }
     return Object.keys(iterable);
 }
 function len(obj) {
     var tmp;
     if (obj.constructor === [].constructor || obj.constructor === "".constructor || (tmp = Array.prototype.slice.call(obj)).length) {
         return (tmp || obj).length;
+    }
+    if (Set && obj.constructor === Set) {
+        return obj.size;
     }
     return Object.keys(obj).length;
 }
@@ -57,52 +70,59 @@ function ՐՏ_type(obj) {
     return obj && obj.constructor && obj.constructor.name ? obj.constructor.name : Object.prototype.toString.call(obj).slice(8, -1);
 }
 function ՐՏ_eq(a, b) {
-    var ՐՏitr64, ՐՏidx64;
+    var ՐՏitr66, ՐՏidx66;
     var i;
     if (a === b) {
         return true;
     }
-    if (Array.isArray(a) && Array.isArray(b) || a instanceof Object && b instanceof Object) {
-        if (a.constructor !== b.constructor || a.length !== b.length) {
+    if (a === void 0 || b === void 0 || a === null || b === null) {
+        return false;
+    }
+    if (a.constructor !== b.constructor) {
+        return false;
+    }
+    if (Array.isArray(a)) {
+        if (a.length !== b.length) {
             return false;
         }
-        if (Array.isArray(a)) {
-            for (i = 0; i < a.length; i++) {
-                if (!ՐՏ_eq(a[i], b[i])) {
-                    return false;
-                }
-            }
-        } else {
-            if (Object.keys(a).length !== Object.keys(b).length) {
+        for (i = 0; i < a.length; i++) {
+            if (!ՐՏ_eq(a[i], b[i])) {
                 return false;
-            }
-            ՐՏitr64 = ՐՏ_Iterable(a);
-            for (ՐՏidx64 = 0; ՐՏidx64 < ՐՏitr64.length; ՐՏidx64++) {
-                i = ՐՏitr64[ՐՏidx64];
-                if (!ՐՏ_eq(a[i], b[i])) {
-                    return false;
-                }
             }
         }
         return true;
+    } else if (a.constructor === Object) {
+        if (Object.keys(a).length !== Object.keys(b).length) {
+            return false;
+        }
+        ՐՏitr66 = ՐՏ_Iterable(a);
+        for (ՐՏidx66 = 0; ՐՏidx66 < ՐՏitr66.length; ՐՏidx66++) {
+            i = ՐՏitr66[ՐՏidx66];
+            if (!ՐՏ_eq(a[i], b[i])) {
+                return false;
+            }
+        }
+        return true;
+    } else if (Set && a.constructor === Set || Map && a.constructor === Map) {
+        if (a.size !== b.size) {
+            return false;
+        }
+        for (i of a) {
+            if (!b.has(i)) {
+                return false;
+            }
+        }
+        return true;
+    } else if (a.constructor === Date) {
+        return a.getTime() === b.getTime();
+    } else if (typeof a.__eq__ === "function") {
+        return a.__eq__(b);
     }
     return false;
 }
 var ՐՏ_modules = {};
-ՐՏ_modules["asset"] = {};
 ՐՏ_modules["asset.rs_vue"] = {};
 ՐՏ_modules["asset.common"] = {};
-ՐՏ_modules["components"] = {};
-ՐՏ_modules["components.folder_content"] = {};
-ՐՏ_modules["components.editor"] = {};
-ՐՏ_modules["components.modal"] = {};
-ՐՏ_modules["components.confirm"] = {};
-ՐՏ_modules["components.app_selector"] = {};
-ՐՏ_modules["components.menu"] = {};
-ՐՏ_modules["components.flash"] = {};
-ՐՏ_modules["components.base_layout"] = {};
-ՐՏ_modules["components.error"] = {};
-ՐՏ_modules["store"] = {};
 ՐՏ_modules["asset.fs_path"] = {};
 ՐՏ_modules["asset.fs"] = {};
 ՐՏ_modules["asset.html_ml"] = {};
@@ -111,35 +131,25 @@ var ՐՏ_modules = {};
 ՐՏ_modules["asset.vuepy_output"] = {};
 ՐՏ_modules["asset.cm_vuepy"] = {};
 ՐՏ_modules["asset.cm_rapydscript"] = {};
+ՐՏ_modules["asset"] = {};
+ՐՏ_modules["components.confirm"] = {};
+ՐՏ_modules["components.error"] = {};
+ՐՏ_modules["components.app_selector"] = {};
+ՐՏ_modules["components.vform"] = {};
+ՐՏ_modules["components.login"] = {};
+ՐՏ_modules["components.folder_content"] = {};
+ՐՏ_modules["components.editor"] = {};
+ՐՏ_modules["components.menu"] = {};
+ՐՏ_modules["components.flash"] = {};
+ՐՏ_modules["components.base_layout"] = {};
+ՐՏ_modules["components.modal"] = {};
+ՐՏ_modules["components"] = {};
 ՐՏ_modules["store.editor"] = {};
 ՐՏ_modules["store.explorer"] = {};
 ՐՏ_modules["server"] = {};
 ՐՏ_modules["app_menu"] = {};
 ՐՏ_modules["store.root"] = {};
-
-(function(){
-    var __name__ = "asset";
-
-    ՐՏ_modules["asset"]["rs_vue"] = ՐՏ_modules["asset.rs_vue"];
-
-    ՐՏ_modules["asset"]["common"] = ՐՏ_modules["asset.common"];
-
-    ՐՏ_modules["asset"]["fs_path"] = ՐՏ_modules["asset.fs_path"];
-
-    ՐՏ_modules["asset"]["fs"] = ՐՏ_modules["asset.fs"];
-
-    ՐՏ_modules["asset"]["html_ml"] = ՐՏ_modules["asset.html_ml"];
-
-    ՐՏ_modules["asset"]["vuepy_parser"] = ՐՏ_modules["asset.vuepy_parser"];
-
-    ՐՏ_modules["asset"]["vuepy_compiler"] = ՐՏ_modules["asset.vuepy_compiler"];
-
-    ՐՏ_modules["asset"]["vuepy_output"] = ՐՏ_modules["asset.vuepy_output"];
-
-    ՐՏ_modules["asset"]["cm_vuepy"] = ՐՏ_modules["asset.cm_vuepy"];
-
-    ՐՏ_modules["asset"]["cm_rapydscript"] = ՐՏ_modules["asset.cm_rapydscript"];
-})();
+ՐՏ_modules["store"] = {};
 
 (function(){
     var __name__ = "asset.rs_vue";
@@ -768,57 +778,141 @@ var ՐՏ_modules = {};
 
 (function(){
     var __name__ = "asset.common";
+    class Merge_call {
+        set_key (a) {
+            var self = this;
+            self.cmd = "set_key";
+            self.args = a;
+            return self;
+        }
+        merge (a) {
+            var self = this;
+            self.cmd = "merge";
+            self.args = a;
+            return self;
+        }
+    }
     function asyncer(fun) {
-        var ctx, ret;
-        ctx = {
-            self: void 0,
-            args: void 0
-        };
-        function pret(ok, err) {
-            function inner(f, ret_v, ret_throw) {
-                var v;
-                if (ret_throw) {
-                    v = ret_throw;
-                } else {
-                    try {
-                        f = f || fun.apply(ctx.self, ctx.args);
-                        v = f.next(ret_v);
-                    } catch (ՐՏ_Exception) {
-                        var e = ՐՏ_Exception;
+        var merge_call, ret;
+        merge_call = {};
+        function wrap(ctx) {
+            function pret(ok, err) {
+                function inner(f, opt) {
+                    var ret_v, ret_throw, merge_key, v, p;
+                    if (opt) {
+                        ret_v = opt.ret_v;
+                        ret_throw = opt.ret_throw;
+                        merge_key = opt.merge_key;
+                    }
+                    function _err(e, merge_key) {
                         err(e);
-                        return;
+                        if (merge_key) {
+                            merge_call[merge_key].map(function(cb) {
+                                cb.err(e);
+                            });
+                            delete merge_call[merge_key];
+                        }
                     }
-                }
-                if (!v.done) {
-                    if (v.value instanceof Promise) {
-                        v.value.then(function(ret_v) {
-                            inner(f, ret_v);
-                        }, function(e) {
-                            var v;
-                            try {
-                                v = f.throw(e);
-                            } catch (ՐՏ_Exception) {
-                                var e = ՐՏ_Exception;
-                                err(e);
-                                return;
-                            }
-                            inner(f, null, v);
-                        });
+                    if (ret_throw) {
+                        v = ret_throw;
                     } else {
-                        Promise.resolve(v.value).then(function(ret_v) {
-                            inner(f, ret_v);
-                        });
+                        try {
+                            f = f || fun.apply(ctx.self, ctx.args);
+                            v = f.next(ret_v);
+                        } catch (ՐՏ_Exception) {
+                            var e = ՐՏ_Exception;
+                            _err(e, merge_key);
+                            return;
+                        }
                     }
-                } else {
-                    ok(v.value);
+                    if (v.value instanceof Merge_call) {
+                        if (v.value.cmd === "get_keys") {
+                            Promise.resolve(Object.keys(merge_call)).then(function(ret_v) {
+                                inner(f, {
+                                    ret_v: ret_v,
+                                    merge_key: merge_key
+                                });
+                            });
+                        } else if (v.value.cmd === "merge") {
+                            if (p = merge_call[v.value.args]) {
+                                p.push({
+                                    ok: function(v) {
+                                        ok(v);
+                                    },
+                                    err: function(v) {
+                                        err(v);
+                                    }
+                                });
+                                return;
+                            } else {
+                                merge_key = v.value.args;
+                                merge_call[merge_key] = [];
+                                Promise.resolve(null).then(function(ret_v) {
+                                    inner(f, {
+                                        ret_v: ret_v,
+                                        merge_key: merge_key
+                                    });
+                                });
+                            }
+                        } else {
+                            Promise.resolve(null).then(function(ret_v) {
+                                inner(f, {
+                                    ret_v: ret_v,
+                                    merge_key: merge_key
+                                });
+                            });
+                        }
+                    } else if (!v.done) {
+                        if (v.value instanceof Promise) {
+                            v.value.then(function(ret_v) {
+                                inner(f, {
+                                    ret_v: ret_v,
+                                    merge_key: merge_key
+                                });
+                            }, function(e) {
+                                var v;
+                                try {
+                                    v = f.throw(e);
+                                } catch (ՐՏ_Exception) {
+                                    var e = ՐՏ_Exception;
+                                    _err(e, merge_key);
+                                    return;
+                                }
+                                inner(f, {
+                                    ret_throw: v,
+                                    merge_key: merge_key
+                                });
+                            });
+                        } else {
+                            Promise.resolve(v.value).then(function(ret_v) {
+                                inner(f, {
+                                    ret_v: ret_v,
+                                    merge_key: merge_key
+                                });
+                            });
+                        }
+                    } else {
+                        ok(v.value);
+                        if (merge_key) {
+                            merge_call[merge_key].map(function(cb) {
+                                cb.ok(v.value);
+                            });
+                            delete merge_call[merge_key];
+                        }
+                    }
                 }
+                inner();
             }
-            inner();
+            return pret;
         }
         ret = function() {
-            ctx.self = this;
-            ctx.args = arguments;
-            return new Promise(pret);
+            var ctx, p;
+            ctx = {
+                self: this,
+                args: arguments
+            };
+            p = new Promise(wrap(ctx));
+            return p;
         };
         ret.__name__ = fun.__name__ || fun.name;
         return ret;
@@ -951,9 +1045,10 @@ var ՐՏ_modules = {};
         return mousedn;
     }
     function blur_click_listener(el, cb) {
-        var ret, blur;
+        var ret, blur, listen;
         ret = {};
         blur = false;
+        listen = false;
         function doc_click_cap(e) {
             blur = true;
             setTimeout(function() {
@@ -964,15 +1059,25 @@ var ՐՏ_modules = {};
             blur = false;
         }
         ret.start = function() {
+            if (listen) {
+                return;
+            }
             document.addEventListener("click", doc_click_cap, true);
             el.addEventListener("click", el_click, true);
+            listen = true;
         };
         ret.stop = function() {
+            if (!listen) {
+                return;
+            }
             document.removeEventListener("click", doc_click_cap, true);
             el.removeEventListener("click", el_click, true);
+            listen = false;
         };
         return ret;
     }
+    ՐՏ_modules["asset.common"]["Merge_call"] = Merge_call;
+
     ՐՏ_modules["asset.common"]["asyncer"] = asyncer;
 
     ՐՏ_modules["asset.common"]["upload_text"] = upload_text;
@@ -987,823 +1092,6 @@ var ՐՏ_modules = {};
 })();
 
 (function(){
-    var __name__ = "components";
-
-    ՐՏ_modules["components"]["folder_content"] = ՐՏ_modules["components.folder_content"];
-
-    ՐՏ_modules["components"]["editor"] = ՐՏ_modules["components.editor"];
-
-    ՐՏ_modules["components"]["modal"] = ՐՏ_modules["components.modal"];
-
-    ՐՏ_modules["components"]["confirm"] = ՐՏ_modules["components.confirm"];
-
-    ՐՏ_modules["components"]["app_selector"] = ՐՏ_modules["components.app_selector"];
-
-    ՐՏ_modules["components"]["menu"] = ՐՏ_modules["components.menu"];
-
-    ՐՏ_modules["components"]["flash"] = ՐՏ_modules["components.flash"];
-
-    ՐՏ_modules["components"]["base_layout"] = ՐՏ_modules["components.base_layout"];
-
-    ՐՏ_modules["components"]["error"] = ՐՏ_modules["components.error"];
-})();
-
-(function(){
-    var __name__ = "components.folder_content";
-    var templ_folder_content, vc;
-    templ_folder_content = "\n<div>\n    <span>\n        <ul  class = 'bar path'>\n            <li  v-for = 'dir in path' @click = 'change_dir(dir.id)'>\n                <span>\n                    {{dir.name}}\n                </span>\n            </li>\n            <li  class = 'hover_off'>\n                <input  ref = 'new' style = 'width:180px;' :value = 'save_as && save_as.name' placeholder = 'newfile.py'/>\n                <template  v-if = 'save_as'>\n                    <button  type = 'button' class = 'v-btn' @click = \"(action('save_as', {name: $refs.new.value, content: save_as.content}),  $refs.new.value ='')\">\n                        Save\n                    </button>\n                </template>\n                <template  v-else>\n                    <button  type = 'button' class = 'v-btn' @click = \"(action('create', $refs.new.value),  $refs.new.value ='')\">\n                        Create\n                    </button>\n                    <button  type = 'button' class = 'v-btn' @click = \"action('upload')\">\n                        Upload\n                    </button>\n                </template>\n            </li>\n        </ul>\n    </span>\n    <ul  class = 'bar'>\n        <li  v-for = 'it in actions' @click = 'it.disabled || action(it.name)' class = 'inverse' :disabled = 'it.disabled'>\n            {{it.label}}\n            <span  v-if = 'selected_cnt(it.name)>0' style = 'color:red;background-color:white; padding: 0 5px; border-radius: 10px;'>{{selected_cnt(it.name)}}</span>\n        </li>\n    </ul>\n    <table  class = 'folder'>\n        <thead>\n            <tr>\n                <th  v-for = 'fld, idx in fields' :colspan = 'idx == 0 ? 2 : 1'>\n                    {{fld.label}}\n                </th>\n                <th  v-if = 'row_actions'>\n                    actions\n                </th>\n            </tr>\n            <tr  style = 'height: 0px'>\n                <th  style = 'width:20px;'/>\n                <th  v-for = 'fld in fields' :style = \"{width: (fld.width || 'initial')}\"/>\n                <th  v-if = 'row_actions' style = 'width:50px;'/>\n            </tr>\n        </thead>\n    </table>\n    <div  style = 'max-height: 65vh; overflow:auto;'>\n        <table  class = 'folder'>\n            <thead>\n                <tr  style = 'height: 0px'>\n                    <th  style = 'width:20px;'/>\n                    <th  v-for = 'fld in fields' :style = \"{width: (fld.width || 'initial')}\"/>\n                    <th  v-if = 'row_actions' style = 'width:50px;'/>\n                </tr>\n            </thead>\n            <tbody>\n                <tr  v-for = 'row in rows_c' @click = 'toggle_select(row.id)' :key = 'row.id' :class = '{selected: selected[row.id]}'>\n                    <td>\n                        <i  class = 'clickable' :class = 'row._icon_.class' :style = 'row._icon_.style' @click.stop = 'click(row.id)'></i>\n                    </td>\n                    <td  v-for = 'fld, idx in fields'>\n                        <template  v-if = 'idx==0'>\n                            <span  class = 'clickable' @click.stop = 'click(row.id)'>\n                                {{row[fld.name]}}\n                            </span>\n                        </template>\n                        <template  v-else>\n                            <span>\n                                {{row[fld.name]}}\n                            </span>\n                        </template>\n                    </td>\n                    <td  v-if = 'row_actions'>\n                        <span  v-for = 'ract in row_actions(row)' style = 'margin-right:3px;'>\n                            <i  class = 'clickable' :class = 'ract.icon.class' :style = 'ract.icon.style' @click.stop = 'action(ract, row.id)'></i>\n                        </span>\n                    </td>\n                </tr>\n            </tbody>\n        </table>\n    </div>\n</div>\n";
-    var v_meth = ՐՏ_modules["asset.rs_vue"].v_meth;
-    var v_computed = ՐՏ_modules["asset.rs_vue"].v_computed;
-    var v_watch = ՐՏ_modules["asset.rs_vue"].v_watch;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
-    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    
-    "\n@external\nclass Vue:\n    @staticmethod\n    def component():\n        pass\n";
-    function it_by_path(obj, path) {
-        var cur;
-        if (!(path instanceof Array)) {
-            path = path.split(".");
-        }
-        cur = obj;
-        path.forEach(function(p) {
-            cur = cur[p];
-        });
-        return cur;
-    }
-    vc = new V_collector();
-    var Folder_content = (ՐՏ_2 = class Folder_content extends RS_vue {
-        constructor () {
-            super(vc);
-            var self = this;
-            self.template = templ_folder_content;
-            self.map_store = {
-                type_field: "/explorer.type_field",
-                fields: "/explorer.fields",
-                rows: "/explorer.list_dir",
-                sort_by: "/explorer.sort_by",
-                selected: "/explorer.selected",
-                path: "/explorer.path_arr",
-                save_as: "/explorer.save_as",
-                row_actions: "/explorer.row_actions",
-                toggle_select: "/explorer.toggle_select~",
-                change_dir: "/explorer.set_dir~",
-                click: "/explorer.click_item*",
-                action: "/explorer.doit*",
-                basket: "/explorer.basket"
-            };
-        }
-        _init_data () {
-            var self = this;
-            var ret;
-            ret = {
-                actions: [ {
-                    name: "copy",
-                    label: "Copy"
-                }, {
-                    name: "cut",
-                    label: "Cut",
-                    disabled: true
-                }, {
-                    name: "paste",
-                    label: "Paste"
-                }, {
-                    name: "del",
-                    label: "Del"
-                } ]
-            };
-            return ret;
-        }
-        toggle_select (mut, rid) {
-            var self = this;
-            var r;
-            r = self.rows.find(function(it) {
-                return it.id === rid;
-            });
-            if (r[self.type_field] === "file") {
-                mut(rid);
-            }
-        }
-        selected_cnt (act) {
-            var self = this;
-            if (act === "del") {
-                return Object.keys(self.selected).length;
-            } else if (act === "paste") {
-                return self.basket.length - 1;
-            }
-        }
-        save_as (n, o) {
-            var self = this;
-            self.$refs.new.value = n && n.name;
-        }
-        rows_c () {
-            var ՐՏitr9, ՐՏidx9, ՐՏitr10, ՐՏidx10;
-            var self = this;
-            var type_icon, type_field, rows_sorted, sort_by, ret, row, rec, fld;
-            type_icon = {
-                file: {
-                    class: "fa fa-file-o",
-                    style: "color: gray"
-                },
-                dir: {
-                    class: "fa fa-folder",
-                    style: "color: gray"
-                }
-            };
-            type_field = self.type_field || "type";
-            rows_sorted = self.rows.slice(0);
-            sort_by = self.sort_by || self.fields[0].name;
-            rows_sorted.sort(function(a, b) {
-                var a_type, b_type, ret;
-                a_type = it_by_path(a, type_field);
-                b_type = it_by_path(b, type_field);
-                ret = a_type > b_type ? 1 : a_type < b_type ? -1 : 0;
-                if (!ret) {
-                    a = a[sort_by];
-                    b = b[sort_by];
-                    ret = a > b ? 1 : a < b ? -1 : 0;
-                }
-                return ret;
-            });
-            ret = [];
-            ՐՏitr9 = ՐՏ_Iterable(rows_sorted);
-            for (ՐՏidx9 = 0; ՐՏidx9 < ՐՏitr9.length; ՐՏidx9++) {
-                row = ՐՏitr9[ՐՏidx9];
-                rec = {
-                    id: row.id
-                };
-                ՐՏitr10 = ՐՏ_Iterable(self.fields);
-                for (ՐՏidx10 = 0; ՐՏidx10 < ՐՏitr10.length; ՐՏidx10++) {
-                    fld = ՐՏitr10[ՐՏidx10];
-                    rec[fld.name] = it_by_path(row, fld.name);
-                    if (fld.formatter) {
-                        rec[fld.name] = fld.formatter(rec[fld.name], row);
-                    }
-                }
-                rec._icon_ = type_icon[row[type_field]];
-                ret.push(rec);
-            }
-            return ret;
-        }
-    }, (function(){
-        Object.defineProperties(ՐՏ_2.prototype, {
-            toggle_select: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.meth(ՐՏ_2.prototype.toggle_select)
-            },
-            selected_cnt: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.meth(ՐՏ_2.prototype.selected_cnt)
-            },
-            save_as: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.watch(ՐՏ_2.prototype.save_as)
-            },
-            rows_c: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.computed(ՐՏ_2.prototype.rows_c)
-            }
-        });
-        ;
-    })(), ՐՏ_2);
-    function make() {
-        return new Folder_content();
-    }
-    function main() {
-    }
-    if (__name__ === "__main__") {
-        main();
-    }
-    ՐՏ_modules["components.folder_content"]["templ_folder_content"] = templ_folder_content;
-
-    ՐՏ_modules["components.folder_content"]["vc"] = vc;
-
-    ՐՏ_modules["components.folder_content"]["it_by_path"] = it_by_path;
-
-    ՐՏ_modules["components.folder_content"]["Folder_content"] = Folder_content;
-
-    ՐՏ_modules["components.folder_content"]["make"] = make;
-
-    ՐՏ_modules["components.folder_content"]["main"] = main;
-})();
-
-(function(){
-    var __name__ = "components.editor";
-    var templ_editor, vc;
-    templ_editor = "\n<div>\n    <ul  class = 'doc_tabs'>\n        <li  v-for = 'doc, doc_k in doc_infos' :key = 'doc_k' :class = \"{active: doc_num == doc_k}\">\n            <span  @click = '(swap_doc(doc_k), edit_focus())'>\n                {{doc.name}}\n            </span>\n            <i  class = 'fa fa-close' @click = 'close(doc_k)' :style = '{color: doc.is_saved ? null : \"red\"}' :title = 'doc.is_saved ? null : \"not saved\"'></i>\n        </li>\n    </ul>\n    <div  v-if = '!doc_num' class = 'editor_welcome'>\n        <div>\n            <h2  style = 'background-color: white'>\n                <span  style = 'color: #42b983;'>Vue</span>\n                <span  class = 'v2p_char' style = 'color: black;'>{{w23p_ver}}</span>\n                <span  class = 'v2p_char' style = 'color: #006ea5;'>p</span>\n                <span  class = 'v2p_char' style = 'color: #bfa03b;'>y</span>\n                <i  class = 'v2p_char' style = 'color: #b00;'>j</i>\n            </h2>\n        </div>\n    </div>\n    <div  v-show = 'doc_num' class = 'editor_up_bar'>\n        <div  class = 'left'>\n            <span  class = 'doc_title'>{{doc_num && doc_info.name || \"\"}}</span>\n            <span>ln: {{cursor.line+1}} col: {{cursor.ch}}</span>\n        </div>\n        <div  class = 'right'>\n            <span>{{doc_path}}</span>\n        </div>\n    </div>\n    <div  v-show = 'doc_num' style = 'position:fixed; left:0; top:140px; bottom:0px; width:100%;'>\n        <div  style = 'position: absolute; top:0px; bottom:50px; width:100%; padding: 0 10px;'>\n            <div  ref = 'cm_el' style = 'height:100%;'></div>\n        </div>\n        <div  style = 'position:fixed; bottom:0px; height:45px;'>\n            <div  v-if = 'error' @click = 'go_error' style = 'cursor:pointer;'>\n                <div>\n                    File: {{error.filename}}\n                </div>\n                <template  v-if = 'error.readfile_error'>\n                    {{error.message}} {{error.readfile_error.line}}:{{error.readfile_error.col}}\n                </template>\n                <template  v-else>\n                    {{error.message}} {{error.line}}:{{error.col}}\n                </template>\n                <div>{{error.stack}}</div>\n            </div>\n            <div  v-else>ok</div>\n        </div>\n    </div>\n</div>\n";
-    var v_meth = ՐՏ_modules["asset.rs_vue"].v_meth;
-    var v_computed = ՐՏ_modules["asset.rs_vue"].v_computed;
-    var v_watch = ՐՏ_modules["asset.rs_vue"].v_watch;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
-    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    
-    vc = new V_collector();
-    var Editor = (ՐՏ_3 = class Editor extends RS_vue {
-        constructor () {
-            super(vc);
-            var self = this;
-            self.template = templ_editor;
-            self.map_store = {
-                get_fs: "get_fs",
-                windows: "/editor.windows",
-                doc_infos: "/editor.doc_infos",
-                set_active_window: "/editor.set_active_window~",
-                mount_cm: "/editor.mount_cm*",
-                swap_doc: "/editor.swap_doc*",
-                close: "/editor.close*",
-                web23py: "web23py"
-            };
-        }
-        _init_data () {
-            var self = this;
-            var ret;
-            ret = {
-                cursor: {
-                    line: 0,
-                    ch: 0
-                },
-                error: null
-            };
-            return ret;
-        }
-        w23p_ver () {
-            var self = this;
-            return /^.+(\d)/.exec(self.web23py)[1];
-        }
-        doc_num () {
-            var self = this;
-            return self.windows.w0 && self.windows.w0.doc_num;
-        }
-        doc_info () {
-            var self = this;
-            return self.doc_num && self.doc_infos[self.doc_num];
-        }
-        doc_path () {
-            var self = this;
-            var fs;
-            if (!self.doc_info) {
-                return;
-            }
-            fs = self.get_fs();
-            return fs.path_by_id(self.doc_info.id).path;
-        }
-        mounted () {
-            var self = this;
-            function clean_up(cm) {
-                self.cm = cm;
-                self.set_active_window("w0");
-                self.$refs.cm_el.children[0].style.lineHeight = "1.5";
-                cm.on("cursorActivity", function() {
-                    self.cursor_move();
-                });
-                cm.setSize("100%", "100%");
-            }
-            self.mount_cm(self.$refs.cm_el, "w0").then(clean_up);
-        }
-        edit_focus () {
-            var self = this;
-            self.$nextTick(function() {
-                self.cm && self.cm.focus();
-            });
-        }
-        cursor_move () {
-            var self = this;
-            self.cursor = self.cm.getCursor();
-        }
-        doc_num_watch (to_doc, cur_doc) {
-            var self = this;
-            self.$nextTick(function() {
-                self.cm.refresh();
-                self.cursor_move();
-                self.edit_focus();
-            });
-        }
-        go_error () {
-            var ՐՏ_4, ՐՏ_5;
-            var self = this;
-            var err;
-            err = self.error.readfile_error || self.error;
-            if (!err || ((ՐՏ_4 = err.line) === (ՐՏ_5 = void 0) || typeof ՐՏ_4 === "object" && ՐՏ_eq(ՐՏ_4, ՐՏ_5))) {
-                return;
-            }
-            self.cm.focus();
-            self.cm.doc.setCursor(err.line - 1, err.col);
-        }
-    }, (function(){
-        Object.defineProperties(ՐՏ_3.prototype, {
-            w23p_ver: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.computed(ՐՏ_3.prototype.w23p_ver)
-            },
-            doc_num: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.computed(ՐՏ_3.prototype.doc_num)
-            },
-            doc_info: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.computed(ՐՏ_3.prototype.doc_info)
-            },
-            doc_path: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.computed(ՐՏ_3.prototype.doc_path)
-            },
-            edit_focus: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.meth(ՐՏ_3.prototype.edit_focus)
-            },
-            cursor_move: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.meth(ՐՏ_3.prototype.cursor_move)
-            },
-            doc_num_watch: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.watch("doc_num")(ՐՏ_3.prototype.doc_num_watch)
-            },
-            go_error: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.meth(ՐՏ_3.prototype.go_error)
-            }
-        });
-        ;
-    })(), ՐՏ_3);
-    function make() {
-        return new Editor();
-    }
-    function main() {
-    }
-    if (__name__ === "__main__") {
-        main();
-    }
-    ՐՏ_modules["components.editor"]["templ_editor"] = templ_editor;
-
-    ՐՏ_modules["components.editor"]["vc"] = vc;
-
-    ՐՏ_modules["components.editor"]["Editor"] = Editor;
-
-    ՐՏ_modules["components.editor"]["make"] = make;
-
-    ՐՏ_modules["components.editor"]["main"] = main;
-})();
-
-(function(){
-    var __name__ = "components.modal";
-    var templ, vc;
-    templ = "\n<div  class = 'modal-container' v-if = 'modal_state.is_active'>\n    <component  :is = 'modal_state.inner_component' v-bind = 'modal_state.inner_args' @close = 'close_modal'></component>\n</div>\n";
-    var v_meth = ՐՏ_modules["asset.rs_vue"].v_meth;
-    var v_computed = ՐՏ_modules["asset.rs_vue"].v_computed;
-    var v_watch = ՐՏ_modules["asset.rs_vue"].v_watch;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
-    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    
-    vc = new V_collector();
-    class Modal extends RS_vue {
-        constructor () {
-            super(vc);
-            var self = this;
-            self.template = templ;
-            self.map_store = {
-                modal_state: "modal_state",
-                close_modal: "close_modal*"
-            };
-        }
-        _init_data () {
-            var self = this;
-            var ret;
-            ret = {};
-            return ret;
-        }
-    }
-    function make() {
-        return new Modal();
-    }
-    function main() {
-    }
-    if (__name__ === "__main__") {
-        main();
-    }
-    ՐՏ_modules["components.modal"]["templ"] = templ;
-
-    ՐՏ_modules["components.modal"]["vc"] = vc;
-
-    ՐՏ_modules["components.modal"]["Modal"] = Modal;
-
-    ՐՏ_modules["components.modal"]["make"] = make;
-
-    ՐՏ_modules["components.modal"]["main"] = main;
-})();
-
-(function(){
-    var __name__ = "components.confirm";
-    var templ, vc;
-    templ = "\n<div  class = 'confirm lifted'>\n    <div>{{message}}</div>\n    <div  style = 'text-align:right;padding-top:10px;'>\n        <button  type = 'button' @click = '$emit(\"close\", \"ok\")'>OK</button>\n        <button  type = 'button' @click = '$emit(\"close\", \"cancel\")'>Cancel</button>\n    </div>\n</div>\n";
-    var v_meth = ՐՏ_modules["asset.rs_vue"].v_meth;
-    var v_computed = ՐՏ_modules["asset.rs_vue"].v_computed;
-    var v_watch = ՐՏ_modules["asset.rs_vue"].v_watch;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
-    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    
-    vc = new V_collector();
-    class Confirm extends RS_vue {
-        constructor () {
-            super(vc);
-            var self = this;
-            self.template = templ;
-            self.map_store = {};
-            self.props = {
-                message: String
-            };
-        }
-        _init_data () {
-            var self = this;
-            var ret;
-            ret = {};
-            return ret;
-        }
-    }
-    function make() {
-        return new Confirm();
-    }
-    function main() {
-    }
-    if (__name__ === "__main__") {
-        main();
-    }
-    ՐՏ_modules["components.confirm"]["templ"] = templ;
-
-    ՐՏ_modules["components.confirm"]["vc"] = vc;
-
-    ՐՏ_modules["components.confirm"]["Confirm"] = Confirm;
-
-    ՐՏ_modules["components.confirm"]["make"] = make;
-
-    ՐՏ_modules["components.confirm"]["main"] = main;
-})();
-
-(function(){
-    var __name__ = "components.app_selector";
-    var templ, vc;
-    templ = "\n<div  class = 'app_list lifted'>\n    <h5>Choose app to edit:</h5>\n    <ul>\n        <li  class = 'app_list-item' v-for = 'app in app_list'>\n            <a  :class = \"app == cur_app ? 'orange' : 'gray'\" class = 'btn' href = \"#\" @click = '$emit(\"close\", app)'>\n                {{app}}\n            </a>\n        </li>\n    </ul>\n    <div  style = 'text-align:right;'>\n        <button  type = 'button' class = 'blue' @click = '$emit(\"close\", \"cancel\")'>Cancel</button>\n    </div>\n</div>\n";
-    var v_meth = ՐՏ_modules["asset.rs_vue"].v_meth;
-    var v_computed = ՐՏ_modules["asset.rs_vue"].v_computed;
-    var v_watch = ՐՏ_modules["asset.rs_vue"].v_watch;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
-    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    
-    vc = new V_collector();
-    class App_selector extends RS_vue {
-        constructor () {
-            super(vc);
-            var self = this;
-            self.template = templ;
-            self.map_store = {};
-            self.props = {
-                app_list: Array,
-                cur_app: String
-            };
-        }
-        _init_data () {
-            var self = this;
-            var ret;
-            ret = {};
-            return ret;
-        }
-    }
-    function make() {
-        return new App_selector();
-    }
-    function main() {
-    }
-    if (__name__ === "__main__") {
-        main();
-    }
-    ՐՏ_modules["components.app_selector"]["templ"] = templ;
-
-    ՐՏ_modules["components.app_selector"]["vc"] = vc;
-
-    ՐՏ_modules["components.app_selector"]["App_selector"] = App_selector;
-
-    ՐՏ_modules["components.app_selector"]["make"] = make;
-
-    ՐՏ_modules["components.app_selector"]["main"] = main;
-})();
-
-(function(){
-    var __name__ = "components.menu";
-    var templ_menu, vc;
-    templ_menu = "\n<div>\n    <ul  v-for = \"side in ['left', 'right']\" class = \"menu\" :class = '{right: side == \"right\"}'>\n        <li  v-for = 'item in menus[side]' :class = '{disabled: is_disabled(item) }'>\n            <template  v-if = 'item.href != undefined'>\n                <a  class = \"black\" :href = \"mount_prop(item.href)\" @click = 'click(item, $event)' v-bind = \"item.attrs\">\n                    <strong  v-html = 'mount_prop(item.label)'/>\n                </a>\n            </template>\n            <template  v-else-if = 'item.subitems'>\n                <a  class = \"black\" v-html = 'mount_prop(item.label)'></a>\n                <ul><li  v-for = 'subitem in item.subitems' :class = '{disabled: is_disabled(subitem) }'>\n                    <a  :href = \"mount_prop(subitem.href)\" @click = 'click(subitem, $event)' v-html = 'mount_prop(subitem.label)' v-bind = \"subitem.attrs\"></a>\n                </li></ul>\n            </template>\n            <template  v-else>\n                <slot  v-if = 'item.slot' :slot_name = 'item.slot'></slot>\n            </template>\n        </li>\n    </ul>\n</div>\n";
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
-    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    
-    var SF = ՐՏ_modules["asset.common"].SF;
-    
-    vc = new V_collector();
-    var Menu = (ՐՏ_6 = class Menu extends RS_vue {
-        constructor () {
-            super(vc);
-            var self = this;
-            self.map_store = {
-                w23p_app: "w23p_app"
-            };
-            self.template = templ_menu;
-            self.props = {
-                menus: Object
-            };
-        }
-        _init_data () {
-            var self = this;
-            var ret;
-            ret = {};
-            return ret;
-        }
-        mount_prop (label) {
-            var self = this;
-            return SF(label, self);
-        }
-        click (item, e) {
-            var self = this;
-            if (item.href && item.href.startsWith("#cmd:")) {
-                e.preventDefault();
-            }
-            setTimeout(function() {
-                self.$emit("click_item", item, e);
-            }, 0);
-        }
-        is_disabled (it) {
-            var self = this;
-            return false;
-        }
-    }, (function(){
-        Object.defineProperties(ՐՏ_6.prototype, {
-            mount_prop: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.meth(ՐՏ_6.prototype.mount_prop)
-            },
-            click: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.meth(ՐՏ_6.prototype.click)
-            },
-            is_disabled: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.meth(ՐՏ_6.prototype.is_disabled)
-            }
-        });
-        ;
-    })(), ՐՏ_6);
-    function make() {
-        return new Menu();
-    }
-    if (__name__ === "__main__") {
-        main();
-    }
-    ՐՏ_modules["components.menu"]["templ_menu"] = templ_menu;
-
-    ՐՏ_modules["components.menu"]["vc"] = vc;
-
-    ՐՏ_modules["components.menu"]["Menu"] = Menu;
-
-    ՐՏ_modules["components.menu"]["make"] = make;
-})();
-
-(function(){
-    var __name__ = "components.flash";
-    var templ_flash, vc;
-    templ_flash = "\n<div  id = 'flash' :class = 'cls'>\n    <template  v-if = 'component'>\n        <component  :is = 'component' v-bind = 'cargs'></component>\n    </template>\n    <template  v-else>\n        {{msg}}\n    </template>\n</div>\n";
-    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
-    
-    vc = new V_collector();
-    var Flash = (ՐՏ_7 = class Flash extends RS_vue {
-        constructor () {
-            super(vc);
-            var self = this;
-            self.template = templ_flash;
-            self.map_store = {
-                bus: "$bus",
-                msg: "flash.msg",
-                component: "flash.component",
-                cargs: "flash.cargs",
-                status: "flash.status"
-            };
-        }
-        _init_data () {
-            var self = this;
-            var ret;
-            self.hider = null;
-            ret = {
-                cls: ""
-            };
-            return ret;
-        }
-        mounted () {
-            var self = this;
-            self.bus.$on("flash", function() {
-                self.show();
-            });
-        }
-        show () {
-            var self = this;
-            var t;
-            if (self.show.hider) {
-                clearTimeout(self.show.hider);
-                self.hide();
-                self.$nextTick(function() {
-                    self.show();
-                });
-                return;
-            }
-            self.cls = "show " + (self.status || "");
-            t = 1e3;
-            if (self.msg) {
-                t = self.msg.split(/\W+/).length * 900;
-            }
-            self.hider = setTimeout(self.hide, t);
-        }
-        hide () {
-            var self = this;
-            self.cls = "hide " + (self.status || "");
-            self.hider = null;
-        }
-    }, (function(){
-        Object.defineProperties(ՐՏ_7.prototype, {
-            show: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.meth(ՐՏ_7.prototype.show)
-            },
-            hide: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.meth(ՐՏ_7.prototype.hide)
-            }
-        });
-        ;
-    })(), ՐՏ_7);
-    function make() {
-        return new Flash();
-    }
-    if (__name__ === "__main__") {
-        main();
-    }
-    ՐՏ_modules["components.flash"]["templ_flash"] = templ_flash;
-
-    ՐՏ_modules["components.flash"]["vc"] = vc;
-
-    ՐՏ_modules["components.flash"]["Flash"] = Flash;
-
-    ՐՏ_modules["components.flash"]["make"] = make;
-})();
-
-(function(){
-    var __name__ = "components.base_layout";
-    var templ, vc;
-    templ = "\n<div>\n    <div  v-if = 'is_busy' class = 'busy' style = 'position: fixed; top:0; left:0; right:0; bottom: 0; z-index:9999'></div>\n    <header  class = \"black padded lifted fill\" style = 'position:fixed; z-index:1000; top:0'>\n        <div  class = \"container\" id = 'top_menu'>\n            <top_menu  class = \"fill middle\" :menus = 'menus' @click_item = 'menu_click.apply(this, arguments)'>\n                <template  slot-scope = 'props'>\n                    <template  v-if = \"props.slot_name == 'search'\">\n                        <div  style = 'display:inline-block; margin-right: 5px'>\n                            <input  class = \"l_rounded barinput\" placeholder = \"Not implemented\" style = 'width:initial'/>\n                            <div  class = 'btn barinput gray r_rounded' style = 'float:right;'>\n                                <i  class = 'fa fa-search' style = 'line-height:1.5'></i>\n                            </div>\n                        </div>\n                    </template>\n                    <template  v-else-if = \"props.slot_name == 'flash'\">\n                        <div  style = 'position:relative;'>\n                            <a  class = 'black'>\n                                <i  class = 'fa fa-bullhorn fa-flip-horizontal'></i>\n                            </a>\n                            <flash  ref = 'flash' class = 'flash'></flash>\n                        </div>\n                        <ul>\n                            <li>\n                                <a  class = 'hidden'></a>\n                                <div  class = 'flash' :class = 'flash.status'>\n                                    <template  v-if = 'flash.component'>\n                                        <component  :is = 'flash.component' v-bind = 'flash.cargs'></component>\n                                    </template>\n                                    <template  v-else>\n                                        {{flash.msg}}\n                                    </template>\n                                </div>\n                            </li>\n                        </ul>\n                    </template>\n                </template>\n            </top_menu>\n        </div>\n    </header>\n    <main>\n        <div  class = 'main' style = 'margin-top: 50px; min-height:90vh;'>\n            <slot></slot>\n        </div>\n        <div  v-html = '\"&nbsp;\"'></div>\n    </main>\n</div>\n";
-    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
-    
-    var menu = ՐՏ_modules["components.menu"];
-    
-    var flash = ՐՏ_modules["components.flash"];
-    
-    function get_app_opt() {
-        var ret;
-        ret = {};
-        ret.routes = {
-            view: "grid_doc",
-            "new": "span",
-            login: "login"
-        };
-        return ret;
-    }
-    vc = new V_collector();
-    class Layout extends RS_vue {
-        constructor () {
-            super(vc);
-            var self = this;
-            self.template = templ;
-            self.components = {
-                "top_menu": menu.make(),
-                "flash": flash.make()
-            };
-            self.map_store = {
-                flash: "flash",
-                is_busy: "is_busy",
-                menus: "menus",
-                menu_click: "menu_click*"
-            };
-        }
-        _init_data () {
-            var self = this;
-            var app_opt, ret;
-            app_opt = get_app_opt();
-            ret = {
-                routes: app_opt.routes
-            };
-            return ret;
-        }
-    }
-    function make() {
-        return new Layout();
-    }
-    ՐՏ_modules["components.base_layout"]["templ"] = templ;
-
-    ՐՏ_modules["components.base_layout"]["vc"] = vc;
-
-    ՐՏ_modules["components.base_layout"]["get_app_opt"] = get_app_opt;
-
-    ՐՏ_modules["components.base_layout"]["Layout"] = Layout;
-
-    ՐՏ_modules["components.base_layout"]["make"] = make;
-})();
-
-(function(){
-    var __name__ = "components.error";
-    var templ, vc;
-    templ = "\n<div  style = 'white-space:nowrap;'>\n    <template  v-if = 'err'>\n        <div>\n            {{err.message}}\n        </div>\n        <div  @click = 'open_file' style = 'cursor:pointer; text-align:right;' class = 'orange'>\n            {{err_lc.filename}}: [{{err_lc.line}}:{{err_lc.col}}]\n        </div>\n    </template>\n</div>\n";
-    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
-    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
-    
-    vc = new V_collector();
-    var CError = (ՐՏ_8 = class CError extends RS_vue {
-        constructor () {
-            super(vc);
-            var self = this;
-            self.template = templ;
-            self.map_store = {
-                err: "compile_error",
-                open: "/editor.open*",
-                set_cursor: "/editor.set_cursor*"
-            };
-        }
-        _init_data () {
-            var self = this;
-            var ret;
-            ret = {};
-            return ret;
-        }
-        err_lc () {
-            var self = this;
-            return self.err.readfile_error || self.err;
-        }
-        open_file () {
-            var self = this;
-            self.open(self.err_lc.filename, "w0");
-            self.set_cursor(self.err_lc.line - 1, self.err_lc.col);
-        }
-    }, (function(){
-        Object.defineProperties(ՐՏ_8.prototype, {
-            err_lc: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.computed(ՐՏ_8.prototype.err_lc)
-            },
-            open_file: {
-                enumerable: false, 
-                writable: true, 
-                value: vc.meth(ՐՏ_8.prototype.open_file)
-            }
-        });
-        ;
-    })(), ՐՏ_8);
-    function make() {
-        return new CError();
-    }
-    if (__name__ === "__main__") {
-        main();
-    }
-    ՐՏ_modules["components.error"]["templ"] = templ;
-
-    ՐՏ_modules["components.error"]["vc"] = vc;
-
-    ՐՏ_modules["components.error"]["CError"] = CError;
-
-    ՐՏ_modules["components.error"]["make"] = make;
-})();
-
-(function(){
-    var __name__ = "store";
-
-    ՐՏ_modules["store"]["editor"] = ՐՏ_modules["store.editor"];
-
-    ՐՏ_modules["store"]["explorer"] = ՐՏ_modules["store.explorer"];
-
-    ՐՏ_modules["store"]["root"] = ՐՏ_modules["store.root"];
-})();
-
-(function(){
     var __name__ = "asset.fs_path";
     var RE_FP_INFO;
     RE_FP_INFO = /^((.*?\/)?([^\/]+?))(\.([^\.]+))?$/;
@@ -1811,7 +1099,7 @@ var ՐՏ_modules = {};
         return /^(\.\w|\w)(\w|\.)*/.test(name);
     }
     function to_arr(path) {
-        var ՐՏitr11, ՐՏidx11;
+        var ՐՏitr9, ՐՏidx9;
         var dirs, beg, d;
         if (path === "" || path === "/") {
             return [ "" ];
@@ -1821,9 +1109,9 @@ var ՐՏ_modules = {};
             dirs = dirs.slice(0, -1);
         }
         beg = dirs[0] === "" ? 1 : 0;
-        ՐՏitr11 = ՐՏ_Iterable(dirs.slice(beg));
-        for (ՐՏidx11 = 0; ՐՏidx11 < ՐՏitr11.length; ՐՏidx11++) {
-            d = ՐՏitr11[ՐՏidx11];
+        ՐՏitr9 = ՐՏ_Iterable(dirs.slice(beg));
+        for (ՐՏidx9 = 0; ՐՏidx9 < ՐՏitr9.length; ՐՏidx9++) {
+            d = ՐՏitr9[ՐՏidx9];
             if (!(d === ".." || is_valid_name(d))) {
                 throw new Error("Bad path: " + path);
             }
@@ -1831,14 +1119,14 @@ var ՐՏ_modules = {};
         return dirs;
     }
     function path_arr_resolve(arr, allow_out_root) {
-        var ՐՏitr12, ՐՏidx12;
+        var ՐՏitr10, ՐՏidx10;
         var i, ret, path_start, it;
         i = 0;
         ret = [];
         path_start = 0;
-        ՐՏitr12 = ՐՏ_Iterable(arr);
-        for (ՐՏidx12 = 0; ՐՏidx12 < ՐՏitr12.length; ՐՏidx12++) {
-            it = ՐՏitr12[ՐՏidx12];
+        ՐՏitr10 = ՐՏ_Iterable(arr);
+        for (ՐՏidx10 = 0; ՐՏidx10 < ՐՏitr10.length; ՐՏidx10++) {
+            it = ՐՏitr10[ՐՏidx10];
             if (it === "") {
                 ret[0] = "";
                 i = 1;
@@ -1863,12 +1151,12 @@ var ՐՏ_modules = {};
         return ret.slice(0, i);
     }
     function path_join() {
-        var ՐՏitr13, ՐՏidx13;
+        var ՐՏitr11, ՐՏidx11;
         var arr, p_str;
         arr = [];
-        ՐՏitr13 = ՐՏ_Iterable(arguments);
-        for (ՐՏidx13 = 0; ՐՏidx13 < ՐՏitr13.length; ՐՏidx13++) {
-            p_str = ՐՏitr13[ՐՏidx13];
+        ՐՏitr11 = ՐՏ_Iterable(arguments);
+        for (ՐՏidx11 = 0; ՐՏidx11 < ՐՏitr11.length; ՐՏidx11++) {
+            p_str = ՐՏitr11[ՐՏidx11];
             if (p_str) {
                 Array.prototype.push.apply(arr, to_arr(p_str));
             }
@@ -1876,12 +1164,12 @@ var ՐՏ_modules = {};
         return path_arr_resolve(arr).join("/");
     }
     function rel_path_join() {
-        var ՐՏitr14, ՐՏidx14;
+        var ՐՏitr12, ՐՏidx12;
         var arr, p_str;
         arr = [];
-        ՐՏitr14 = ՐՏ_Iterable(arguments);
-        for (ՐՏidx14 = 0; ՐՏidx14 < ՐՏitr14.length; ՐՏidx14++) {
-            p_str = ՐՏitr14[ՐՏidx14];
+        ՐՏitr12 = ՐՏ_Iterable(arguments);
+        for (ՐՏidx12 = 0; ՐՏidx12 < ՐՏitr12.length; ՐՏidx12++) {
+            p_str = ՐՏitr12[ՐՏidx12];
             if (p_str) {
                 Array.prototype.push.apply(arr, to_arr(p_str));
             }
@@ -1963,7 +1251,14 @@ var ՐՏ_modules = {};
             return new Promise(prom);
         }
     }
-    var FS = (ՐՏ_9 = class FS {
+    var FS = (ՐՏ_2 = class FS {
+        clear_content () {
+            var self = this;
+            self.files = {};
+            self.dirs = {};
+            self.last_id = 0;
+            self._reset_map_type_();
+        }
         constructor () {
             var self = this;
             self.files = {};
@@ -1985,18 +1280,18 @@ var ՐՏ_modules = {};
             self.fs_path = fs_path;
         }
         _doubles_in_dir_content () {
-            var ՐՏitr15, ՐՏidx15, ՐՏitr16, ՐՏidx16;
+            var ՐՏitr13, ՐՏidx13, ՐՏitr14, ՐՏidx14;
             var self = this;
             var errors, dir_id, dir, tmp, it_id;
             errors = [];
-            ՐՏitr15 = ՐՏ_Iterable(self.dirs);
-            for (ՐՏidx15 = 0; ՐՏidx15 < ՐՏitr15.length; ՐՏidx15++) {
-                dir_id = ՐՏitr15[ՐՏidx15];
+            ՐՏitr13 = ՐՏ_Iterable(self.dirs);
+            for (ՐՏidx13 = 0; ՐՏidx13 < ՐՏitr13.length; ՐՏidx13++) {
+                dir_id = ՐՏitr13[ՐՏidx13];
                 dir = self.dirs[dir_id];
                 tmp = {};
-                ՐՏitr16 = ՐՏ_Iterable(dir.content);
-                for (ՐՏidx16 = 0; ՐՏidx16 < ՐՏitr16.length; ՐՏidx16++) {
-                    it_id = ՐՏitr16[ՐՏidx16];
+                ՐՏitr14 = ՐՏ_Iterable(dir.content);
+                for (ՐՏidx14 = 0; ՐՏidx14 < ՐՏitr14.length; ՐՏidx14++) {
+                    it_id = ՐՏitr14[ՐՏidx14];
                     if (tmp[it_id]) {
                         errors.push({
                             dir_id: dir_id
@@ -2008,19 +1303,19 @@ var ՐՏ_modules = {};
             return errors.length ? errors : null;
         }
         _consistency_errors () {
-            var ՐՏitr17, ՐՏidx17, ՐՏitr18, ՐՏidx18, ՐՏ_10, ՐՏitr19, ՐՏidx19;
+            var ՐՏitr15, ՐՏidx15, ՐՏitr16, ՐՏidx16, ՐՏ_3, ՐՏitr17, ՐՏidx17;
             var self = this;
             var errors, dir_id, dir, it_id, it, f_id, f, parent_dir;
             errors = [];
-            ՐՏitr17 = ՐՏ_Iterable(self.dirs);
-            for (ՐՏidx17 = 0; ՐՏidx17 < ՐՏitr17.length; ՐՏidx17++) {
-                dir_id = ՐՏitr17[ՐՏidx17];
+            ՐՏitr15 = ՐՏ_Iterable(self.dirs);
+            for (ՐՏidx15 = 0; ՐՏidx15 < ՐՏitr15.length; ՐՏidx15++) {
+                dir_id = ՐՏitr15[ՐՏidx15];
                 dir = self.dirs[dir_id];
-                ՐՏitr18 = ՐՏ_Iterable(dir.content);
-                for (ՐՏidx18 = 0; ՐՏidx18 < ՐՏitr18.length; ՐՏidx18++) {
-                    it_id = ՐՏitr18[ՐՏidx18];
+                ՐՏitr16 = ՐՏ_Iterable(dir.content);
+                for (ՐՏidx16 = 0; ՐՏidx16 < ՐՏitr16.length; ՐՏidx16++) {
+                    it_id = ՐՏitr16[ՐՏidx16];
                     it = self.get_info(it_id);
-                    if (((ՐՏ_10 = it.parent) !== dir_id && (typeof ՐՏ_10 !== "object" || !ՐՏ_eq(ՐՏ_10, dir_id)))) {
+                    if (((ՐՏ_3 = it.parent) !== dir_id && (typeof ՐՏ_3 !== "object" || !ՐՏ_eq(ՐՏ_3, dir_id)))) {
                         errors.push({
                             dir_id: dir_id,
                             it_id: it_id
@@ -2028,9 +1323,9 @@ var ՐՏ_modules = {};
                     }
                 }
             }
-            ՐՏitr19 = ՐՏ_Iterable(self.files);
-            for (ՐՏidx19 = 0; ՐՏidx19 < ՐՏitr19.length; ՐՏidx19++) {
-                f_id = ՐՏitr19[ՐՏidx19];
+            ՐՏitr17 = ՐՏ_Iterable(self.files);
+            for (ՐՏidx17 = 0; ՐՏidx17 < ՐՏitr17.length; ՐՏidx17++) {
+                f_id = ՐՏitr17[ՐՏidx17];
                 f = self.files[f_id];
                 parent_dir = self.dirs[f.parent];
                 if (ՐՏ_in(!f_id, parent_dir.content)) {
@@ -2081,14 +1376,14 @@ var ՐՏ_modules = {};
             return id.toString();
         }
         _name_to_id (name, parent_id, scope) {
-            var ՐՏitr20, ՐՏidx20, ՐՏ_11;
+            var ՐՏitr18, ՐՏidx18, ՐՏ_4;
             var self = this;
             var f_d, id;
             f_d = typeof scope === "string" ? self[scope] : scope;
-            ՐՏitr20 = ՐՏ_Iterable(self.dirs[parent_id].content);
-            for (ՐՏidx20 = 0; ՐՏidx20 < ՐՏitr20.length; ՐՏidx20++) {
-                id = ՐՏitr20[ՐՏidx20];
-                if (f_d[id] && ((ՐՏ_11 = f_d[id].name) === name || typeof ՐՏ_11 === "object" && ՐՏ_eq(ՐՏ_11, name))) {
+            ՐՏitr18 = ՐՏ_Iterable(self.dirs[parent_id].content);
+            for (ՐՏidx18 = 0; ՐՏidx18 < ՐՏitr18.length; ՐՏidx18++) {
+                id = ՐՏitr18[ՐՏidx18];
+                if (f_d[id] && ((ՐՏ_4 = f_d[id].name) === name || typeof ՐՏ_4 === "object" && ՐՏ_eq(ՐՏ_4, name))) {
                     return id;
                 }
             }
@@ -2151,7 +1446,7 @@ var ՐՏ_modules = {};
             return dir_id;
         }
         create_path (path) {
-            var ՐՏitr21, ՐՏidx21;
+            var ՐՏitr19, ՐՏidx19;
             var self = this;
             var dirs, i, prnt_id, dir_name, dir_id;
             dirs = self.to_arr(path);
@@ -2162,9 +1457,9 @@ var ՐՏ_modules = {};
             dirs = dirs.slice(1);
             i = 0;
             prnt_id = "0";
-            ՐՏitr21 = ՐՏ_Iterable(dirs);
-            for (ՐՏidx21 = 0; ՐՏidx21 < ՐՏitr21.length; ՐՏidx21++) {
-                dir_name = ՐՏitr21[ՐՏidx21];
+            ՐՏitr19 = ՐՏ_Iterable(dirs);
+            for (ՐՏidx19 = 0; ՐՏidx19 < ՐՏitr19.length; ՐՏidx19++) {
+                dir_name = ՐՏitr19[ՐՏidx19];
                 dir_id = self._name_to_id(dir_name, prnt_id, "dirs");
                 if (dir_id) {
                     ++i;
@@ -2188,7 +1483,7 @@ var ՐՏ_modules = {};
             return dir_id;
         }
         create_file (name, dir_id, content) {
-            var ՐՏ_12;
+            var ՐՏ_5;
             var self = this;
             var ps, id, dt;
             if (dir_id === void 0) {
@@ -2215,7 +1510,7 @@ var ՐՏ_modules = {};
                 mtime: dt
             };
             self.dirs[dir_id].content.push(id);
-            if ((content !== (ՐՏ_12 = void 0) && (typeof content !== "object" || !ՐՏ_eq(content, ՐՏ_12)))) {
+            if ((content !== (ՐՏ_5 = void 0) && (typeof content !== "object" || !ՐՏ_eq(content, ՐՏ_5)))) {
                 self.write_file(id, content);
             }
             return id;
@@ -2231,16 +1526,16 @@ var ՐՏ_modules = {};
             }
         }
         del_file (id) {
-            var ՐՏitr22, ՐՏidx22;
+            var ՐՏitr20, ՐՏidx20;
             var self = this;
             var f, listener, pdir, idx;
             f = self.files[id];
             if (!f) {
                 throw new Error("Bad file_id: " + id);
             }
-            ՐՏitr22 = ՐՏ_Iterable(self._listeners["del_file"]);
-            for (ՐՏidx22 = 0; ՐՏidx22 < ՐՏitr22.length; ՐՏidx22++) {
-                listener = ՐՏitr22[ՐՏidx22];
+            ՐՏitr20 = ՐՏ_Iterable(self._listeners["del_file"]);
+            for (ՐՏidx20 = 0; ՐՏidx20 < ՐՏitr20.length; ՐՏidx20++) {
+                listener = ՐՏitr20[ՐՏidx20];
                 listener(id);
             }
             pdir = self.dirs[f.parent];
@@ -2249,7 +1544,7 @@ var ՐՏ_modules = {};
             delete self.files[id];
         }
         del_dir (id, force_del) {
-            var ՐՏitr23, ՐՏidx23;
+            var ՐՏitr21, ՐՏidx21;
             var self = this;
             var d, child_id, pdir, idx;
             d = self.dirs[id];
@@ -2258,9 +1553,9 @@ var ՐՏ_modules = {};
             } else if (d.content.length && !force_del) {
                 throw new Error("Dir is not empty: " + id);
             }
-            ՐՏitr23 = ՐՏ_Iterable(d.content.slice(0));
-            for (ՐՏidx23 = 0; ՐՏidx23 < ՐՏitr23.length; ՐՏidx23++) {
-                child_id = ՐՏitr23[ՐՏidx23];
+            ՐՏitr21 = ՐՏ_Iterable(d.content.slice(0));
+            for (ՐՏidx21 = 0; ՐՏidx21 < ՐՏitr21.length; ՐՏidx21++) {
+                child_id = ՐՏitr21[ՐՏidx21];
                 if (self.files[child_id]) {
                     self.del_file(child_id);
                 } else {
@@ -2273,14 +1568,14 @@ var ՐՏ_modules = {};
             delete self.dirs[id];
         }
         copy_file (src, dst) {
-            var ՐՏitr24, ՐՏidx24;
+            var ՐՏitr22, ՐՏidx22;
             var self = this;
             var d, f_id;
             src = self.files[src];
             dst = self.dirs[dst];
-            ՐՏitr24 = ՐՏ_Iterable([ src, dst ]);
-            for (ՐՏidx24 = 0; ՐՏidx24 < ՐՏitr24.length; ՐՏidx24++) {
-                d = ՐՏitr24[ՐՏidx24];
+            ՐՏitr22 = ՐՏ_Iterable([ src, dst ]);
+            for (ՐՏidx22 = 0; ՐՏidx22 < ՐՏitr22.length; ՐՏidx22++) {
+                d = ՐՏitr22[ՐՏidx22];
                 if (!d) {
                     throw new Error("Bad dir_id: " + id);
                 }
@@ -2290,24 +1585,24 @@ var ՐՏ_modules = {};
             return f_id;
         }
         copy_dir (src, dst) {
-            var ՐՏitr25, ՐՏidx25, ՐՏitr26, ՐՏidx26, ՐՏ_13, ՐՏ_14;
+            var ՐՏitr23, ՐՏidx23, ՐՏitr24, ՐՏidx24, ՐՏ_6, ՐՏ_7;
             var self = this;
             var d, src_content, dir_id, id;
             src = self.dirs[src];
             dst = self.dirs[dst];
-            ՐՏitr25 = ՐՏ_Iterable([ src, dst ]);
-            for (ՐՏidx25 = 0; ՐՏidx25 < ՐՏitr25.length; ՐՏidx25++) {
-                d = ՐՏitr25[ՐՏidx25];
+            ՐՏitr23 = ՐՏ_Iterable([ src, dst ]);
+            for (ՐՏidx23 = 0; ՐՏidx23 < ՐՏitr23.length; ՐՏidx23++) {
+                d = ՐՏitr23[ՐՏidx23];
                 if (!d) {
                     throw new Error("Bad dir_id: " + id);
                 }
             }
             src_content = src.content.slice(0);
             dir_id = self._create_zombie_dir(src.name, dst.id);
-            ՐՏitr26 = ՐՏ_Iterable(src_content);
-            for (ՐՏidx26 = 0; ՐՏidx26 < ՐՏitr26.length; ՐՏidx26++) {
-                id = ՐՏitr26[ՐՏidx26];
-                if (((ՐՏ_13 = self.get_type(id)) === (ՐՏ_14 = self.DIR) || typeof ՐՏ_13 === "object" && ՐՏ_eq(ՐՏ_13, ՐՏ_14))) {
+            ՐՏitr24 = ՐՏ_Iterable(src_content);
+            for (ՐՏidx24 = 0; ՐՏidx24 < ՐՏitr24.length; ՐՏidx24++) {
+                id = ՐՏitr24[ՐՏidx24];
+                if (((ՐՏ_6 = self.get_type(id)) === (ՐՏ_7 = self.DIR) || typeof ՐՏ_6 === "object" && ՐՏ_eq(ՐՏ_6, ՐՏ_7))) {
                     self.copy_dir(id, dir_id);
                 } else {
                     self.copy_file(id, dir_id);
@@ -2326,7 +1621,7 @@ var ՐՏ_modules = {};
             throw new Error("Bad src_id: " + id);
         }
         move (id, dst_dir_id) {
-            var ՐՏ_15, ՐՏ_16, ՐՏ_17;
+            var ՐՏ_8, ՐՏ_9, ՐՏ_10;
             var self = this;
             var dst_dir, it, up_dir_id, cur_parent_dir, idx;
             dst_dir = self.dirs[dst_dir_id];
@@ -2337,7 +1632,7 @@ var ՐՏ_modules = {};
             if (self._name_to_id(it.name, dst_dir_id, self.map_type[it.type])) {
                 throw new Error("Dir or file already exists in dst_dir: " + it.name);
             }
-            if (((ՐՏ_15 = it.type) === (ՐՏ_16 = self.DIR) || typeof ՐՏ_15 === "object" && ՐՏ_eq(ՐՏ_15, ՐՏ_16))) {
+            if (((ՐՏ_8 = it.type) === (ՐՏ_9 = self.DIR) || typeof ՐՏ_8 === "object" && ՐՏ_eq(ՐՏ_8, ՐՏ_9))) {
                 up_dir_id = dst_dir.id;
                 while (up_dir_id) {
                     if ((up_dir_id === id || typeof up_dir_id === "object" && ՐՏ_eq(up_dir_id, id))) {
@@ -2348,7 +1643,7 @@ var ՐՏ_modules = {};
             }
             cur_parent_dir = self.dirs[it.parent];
             idx = cur_parent_dir.content.indexOf(it.id);
-            if ((idx === (ՐՏ_17 = -1) || typeof idx === "object" && ՐՏ_eq(idx, ՐՏ_17))) {
+            if ((idx === (ՐՏ_10 = -1) || typeof idx === "object" && ՐՏ_eq(idx, ՐՏ_10))) {
                 throw new Error("Unexpected error");
             }
             cur_parent_dir.content.splice(idx, 1);
@@ -2365,7 +1660,7 @@ var ՐՏ_modules = {};
             it.obj.name = new_name;
         }
         get_info (id, with_obj) {
-            var ՐՏ_18;
+            var ՐՏ_11;
             var self = this;
             var type, obj, ret;
             type = self.get_type(id);
@@ -2381,7 +1676,7 @@ var ՐՏ_modules = {};
                 mtime: obj.mtime,
                 ctime: obj.ctime
             };
-            if ((type === (ՐՏ_18 = self.FILE) || typeof type === "object" && ՐՏ_eq(type, ՐՏ_18))) {
+            if ((type === (ՐՏ_11 = self.FILE) || typeof type === "object" && ՐՏ_eq(type, ՐՏ_11))) {
                 ret.md5_hash = obj.md5_hash;
             }
             if (with_obj) {
@@ -2390,7 +1685,7 @@ var ՐՏ_modules = {};
             return ret;
         }
         write_file (fid, content, mtime) {
-            var ՐՏitr27, ՐՏidx27;
+            var ՐՏitr25, ՐՏidx25;
             var self = this;
             var f, listener;
             if (!(f = self.files[fid])) {
@@ -2398,9 +1693,9 @@ var ՐՏ_modules = {};
             }
             f.content = content;
             f.mtime = mtime || new Date().valueOf();
-            ՐՏitr27 = ՐՏ_Iterable(self._listeners["write_file"]);
-            for (ՐՏidx27 = 0; ՐՏidx27 < ՐՏitr27.length; ՐՏidx27++) {
-                listener = ՐՏitr27[ՐՏidx27];
+            ՐՏitr25 = ՐՏ_Iterable(self._listeners["write_file"]);
+            for (ՐՏidx25 = 0; ՐՏidx25 < ՐՏitr25.length; ՐՏidx25++) {
+                listener = ՐՏitr25[ՐՏidx25];
                 listener(fid);
             }
         }
@@ -2415,14 +1710,14 @@ var ՐՏ_modules = {};
             };
         }
         off (event, listener) {
-            var ՐՏ_19;
+            var ՐՏ_12;
             var self = this;
             var lst, idx;
             if (!(lst = self._listeners[event])) {
                 throw new Error("unknown event: " + event);
             }
             idx = lst.indexOf(listener);
-            if ((idx !== (ՐՏ_19 = -1) && (typeof idx !== "object" || !ՐՏ_eq(idx, ՐՏ_19)))) {
+            if ((idx !== (ՐՏ_12 = -1) && (typeof idx !== "object" || !ՐՏ_eq(idx, ՐՏ_12)))) {
                 lst.splice(idx, 1);
             }
         }
@@ -2446,16 +1741,16 @@ var ՐՏ_modules = {};
             return ret;
         }
         list_dir (dir_id) {
-            var ՐՏitr28, ՐՏidx28;
+            var ՐՏitr26, ՐՏidx26;
             var self = this;
             var ret, id;
             if (!self.dirs[dir_id]) {
                 throw new Error("Bad dir_id: " + dir_id);
             }
             ret = [];
-            ՐՏitr28 = ՐՏ_Iterable(self.dirs[dir_id].content);
-            for (ՐՏidx28 = 0; ՐՏidx28 < ՐՏitr28.length; ՐՏidx28++) {
-                id = ՐՏitr28[ՐՏidx28];
+            ՐՏitr26 = ՐՏ_Iterable(self.dirs[dir_id].content);
+            for (ՐՏidx26 = 0; ՐՏidx26 < ՐՏitr26.length; ՐՏidx26++) {
+                id = ՐՏitr26[ՐՏidx26];
                 ret.push(id);
             }
             return ret;
@@ -2469,17 +1764,17 @@ var ՐՏ_modules = {};
             return fs_path.path_join.apply(null, arguments);
         }
         id_by_path (path) {
-            var ՐՏitr30, ՐՏidx30;
+            var ՐՏitr28, ՐՏidx28;
             var self = this;
             var arr_pth, prnt_id, dir_id, not_found, name, id;
             function find_id(name, parent_id) {
-                var ՐՏitr29, ՐՏidx29, ՐՏ_20;
+                var ՐՏitr27, ՐՏidx27, ՐՏ_13;
                 var id, it;
-                ՐՏitr29 = ՐՏ_Iterable(self.dirs[parent_id].content);
-                for (ՐՏidx29 = 0; ՐՏidx29 < ՐՏitr29.length; ՐՏidx29++) {
-                    id = ՐՏitr29[ՐՏidx29];
+                ՐՏitr27 = ՐՏ_Iterable(self.dirs[parent_id].content);
+                for (ՐՏidx27 = 0; ՐՏidx27 < ՐՏitr27.length; ՐՏidx27++) {
+                    id = ՐՏitr27[ՐՏidx27];
                     it = self.dirs[id] || self.files[id];
-                    if (((ՐՏ_20 = it.name) === name || typeof ՐՏ_20 === "object" && ՐՏ_eq(ՐՏ_20, name))) {
+                    if (((ՐՏ_13 = it.name) === name || typeof ՐՏ_13 === "object" && ՐՏ_eq(ՐՏ_13, name))) {
                         return id;
                     }
                 }
@@ -2499,9 +1794,9 @@ var ՐՏ_modules = {};
             prnt_id = 0;
             dir_id = 0;
             not_found = false;
-            ՐՏitr30 = ՐՏ_Iterable(arr_pth);
-            for (ՐՏidx30 = 0; ՐՏidx30 < ՐՏitr30.length; ՐՏidx30++) {
-                name = ՐՏitr30[ՐՏidx30];
+            ՐՏitr28 = ՐՏ_Iterable(arr_pth);
+            for (ՐՏidx28 = 0; ՐՏidx28 < ՐՏitr28.length; ՐՏidx28++) {
+                name = ՐՏitr28[ՐՏidx28];
                 id = find_id(name, prnt_id);
                 if (id) {
                     prnt_id = id;
@@ -2550,7 +1845,7 @@ var ՐՏ_modules = {};
     }, (function(){
         var FILE = "file";
         var DIR = "dir";
-        Object.defineProperties(ՐՏ_9.prototype, {
+        Object.defineProperties(ՐՏ_2.prototype, {
             FILE: {
                 enumerable: true, 
                 writable: true, 
@@ -2565,7 +1860,7 @@ var ՐՏ_modules = {};
             }
         });
         ;
-    })(), ՐՏ_9);
+    })(), ՐՏ_2);
     ՐՏ_modules["asset.fs"]["FS_local_keeper"] = FS_local_keeper;
 
     ՐՏ_modules["asset.fs"]["FS"] = FS;
@@ -2597,7 +1892,7 @@ var ՐՏ_modules = {};
         return ret;
     }
     function attrs_assign(attrs_base, attrs_extra) {
-        var ՐՏitr31, ՐՏidx31;
+        var ՐՏitr29, ՐՏidx29;
         var attrs_hash, ret, k;
         if (!(attrs_base && len(attrs_base))) {
             return attrs_extra.slice(0);
@@ -2606,9 +1901,9 @@ var ՐՏ_modules = {};
         }
         attrs_hash = Object.assign(attrs2hash(attrs_base), attrs2hash(attrs_extra));
         ret = [];
-        ՐՏitr31 = ՐՏ_Iterable(attrs_hash);
-        for (ՐՏidx31 = 0; ՐՏidx31 < ՐՏitr31.length; ՐՏidx31++) {
-            k = ՐՏitr31[ՐՏidx31];
+        ՐՏitr29 = ՐՏ_Iterable(attrs_hash);
+        for (ՐՏidx29 = 0; ՐՏidx29 < ՐՏitr29.length; ՐՏidx29++) {
+            k = ՐՏitr29[ՐՏidx29];
             ret.push(attrs_hash[k]);
         }
         return ret;
@@ -3027,7 +2322,7 @@ var ՐՏ_modules = {};
             return node;
         }
         parse (rml) {
-            var ՐՏ_21, ՐՏ_22;
+            var ՐՏ_14, ՐՏ_15;
             var self = this;
             var parent, main, child_nodes, S, sol, dlt, chunk, compiler, token, node;
             self.src = rml;
@@ -3127,7 +2422,7 @@ var ՐՏ_modules = {};
                         push_scope(node, "beg_end", self.cur_level);
                     }
                 } else if (token._type === "end") {
-                    if (!sol || ((ՐՏ_21 = parent.scope_level) !== (ՐՏ_22 = self.cur_level) && (typeof ՐՏ_21 !== "object" || !ՐՏ_eq(ՐՏ_21, ՐՏ_22)))) {
+                    if (!sol || ((ՐՏ_14 = parent.scope_level) !== (ՐՏ_15 = self.cur_level) && (typeof ՐՏ_14 !== "object" || !ՐՏ_eq(ՐՏ_14, ՐՏ_15)))) {
                         self.raise_err("Unexpected placement of `---`");
                     }
                     if (parent.scoped_by !== "beg_end") {
@@ -3223,7 +2518,7 @@ var ՐՏ_modules = {};
             };
         }
         print_attrs (attrs, vars, tag_pos, ind) {
-            var ՐՏitr32, ՐՏidx32;
+            var ՐՏitr30, ՐՏidx30;
             var self = this;
             var num_attrs, ret, pref, it, name, val;
             vars = vars || null;
@@ -3232,9 +2527,9 @@ var ՐՏ_modules = {};
             }
             ret = [ " " ];
             pref = !ind || num_attrs <= 5 ? "" : "\n" + ind;
-            ՐՏitr32 = ՐՏ_Iterable(attrs);
-            for (ՐՏidx32 = 0; ՐՏidx32 < ՐՏitr32.length; ՐՏidx32++) {
-                it = ՐՏitr32[ՐՏidx32];
+            ՐՏitr30 = ՐՏ_Iterable(attrs);
+            for (ՐՏidx30 = 0; ՐՏidx30 < ՐՏitr30.length; ՐՏidx30++) {
+                it = ՐՏitr30[ՐՏidx30];
                 name = it.name;
                 val = it.value;
                 if (vars) {
@@ -3267,7 +2562,7 @@ var ՐՏ_modules = {};
             return ret.replace(/\\\$/g, "$");
         }
         print_tag (tag, ind, vars, chunks, stack) {
-            var ՐՏitr33, ՐՏidx33, ՐՏitr34, ՐՏidx34;
+            var ՐՏitr31, ՐՏidx31, ՐՏitr32, ՐՏidx32;
             var self = this;
             var ret, child_inline, name, close_tag, is_verbatim, is_alias, is_chunk, child_nodes, start_content, child_ind, tag_prop, close_meth, i, t, has_child, content;
             ind = ind || "";
@@ -3341,9 +2636,9 @@ var ՐՏ_modules = {};
             }
             if (child_nodes) {
                 i = 0;
-                ՐՏitr33 = ՐՏ_Iterable(child_nodes);
-                for (ՐՏidx33 = 0; ՐՏidx33 < ՐՏitr33.length; ՐՏidx33++) {
-                    t = ՐՏitr33[ՐՏidx33];
+                ՐՏitr31 = ՐՏ_Iterable(child_nodes);
+                for (ՐՏidx31 = 0; ՐՏidx31 < ՐՏitr31.length; ՐՏidx31++) {
+                    t = ՐՏitr31[ՐՏidx31];
                     if (t._type !== "comment") {
                         break;
                     }
@@ -3361,9 +2656,9 @@ var ՐՏ_modules = {};
                     ret.push("\n" + child_ind);
                     ret.push(content.join("\n" + child_ind));
                 } else {
-                    ՐՏitr34 = ՐՏ_Iterable(child_nodes);
-                    for (ՐՏidx34 = 0; ՐՏidx34 < ՐՏitr34.length; ՐՏidx34++) {
-                        t = ՐՏitr34[ՐՏidx34];
+                    ՐՏitr32 = ՐՏ_Iterable(child_nodes);
+                    for (ՐՏidx32 = 0; ՐՏidx32 < ՐՏitr32.length; ՐՏidx32++) {
+                        t = ՐՏitr32[ՐՏidx32];
                         ret.push(self.print_tag(t, child_ind, vars, chunks, stack));
                     }
                 }
@@ -3375,7 +2670,7 @@ var ՐՏ_modules = {};
             return ret.join("");
         }
         pre_compile (src) {
-            var ՐՏitr35, ՐՏidx35, ՐՏitr36, ՐՏidx36;
+            var ՐՏitr33, ՐՏidx33, ՐՏitr34, ՐՏidx34;
             var self = this;
             var p, content, vars, chunks, nodes_to_compile, templ_tbl, out_v_pyj, v_pyj_tag, v_pyj_script, templ_name, rml_templ, node, templ_str, templ_str_len, templ_str_lines_num, out_v_pyj_str, v_css_tag, out_v_css, v_css_str, store_in, ret;
             p = new Parser();
@@ -3385,14 +2680,14 @@ var ՐՏ_modules = {};
                 return it.name === "v-pyj";
             });
             if (v_pyj_tag && v_pyj_tag.child_nodes && (v_pyj_script = v_pyj_tag.child_nodes[0])) {
-                ՐՏitr35 = ՐՏ_Iterable(templ_tbl);
-                for (ՐՏidx35 = 0; ՐՏidx35 < ՐՏitr35.length; ՐՏidx35++) {
-                    templ_name = ՐՏitr35[ՐՏidx35];
+                ՐՏitr33 = ՐՏ_Iterable(templ_tbl);
+                for (ՐՏidx33 = 0; ՐՏidx33 < ՐՏitr33.length; ՐՏidx33++) {
+                    templ_name = ՐՏitr33[ՐՏidx33];
                     rml_templ = templ_tbl[templ_name];
                     out_v_pyj.push(templ_name + '= """');
-                    ՐՏitr36 = ՐՏ_Iterable(rml_templ.child_nodes);
-                    for (ՐՏidx36 = 0; ՐՏidx36 < ՐՏitr36.length; ՐՏidx36++) {
-                        node = ՐՏitr36[ՐՏidx36];
+                    ՐՏitr34 = ՐՏ_Iterable(rml_templ.child_nodes);
+                    for (ՐՏidx34 = 0; ՐՏidx34 < ՐՏitr34.length; ՐՏidx34++) {
+                        node = ՐՏitr34[ՐՏidx34];
                         out_v_pyj.push(self.print_tag(node, null, vars, chunks));
                     }
                     out_v_pyj.push('\n"""\n\n');
@@ -3460,12 +2755,12 @@ var ՐՏ_modules = {};
                 ret.raise_err_at(v_pyj_tag, err);
             };
             ret.make_html = function() {
-                var ՐՏitr37, ՐՏidx37;
+                var ՐՏitr35, ՐՏidx35;
                 var out_html, tag;
                 out_html = [];
-                ՐՏitr37 = ՐՏ_Iterable(content);
-                for (ՐՏidx37 = 0; ՐՏidx37 < ՐՏitr37.length; ՐՏidx37++) {
-                    tag = ՐՏitr37[ՐՏidx37];
+                ՐՏitr35 = ՐՏ_Iterable(content);
+                for (ՐՏidx35 = 0; ՐՏidx35 < ՐՏitr35.length; ՐՏidx35++) {
+                    tag = ՐՏitr35[ՐՏidx35];
                     if (ՐՏ_in(tag.name, [ "v-pyj", "v-css" ])) {
                         continue;
                     }
@@ -3476,7 +2771,7 @@ var ՐՏ_modules = {};
             return ret;
         }
         compile (src) {
-            var ՐՏitr38, ՐՏidx38;
+            var ՐՏitr36, ՐՏidx36;
             var self = this;
             var prec, it, compiler;
             prec = self.pre_compile(src);
@@ -3484,9 +2779,9 @@ var ՐՏ_modules = {};
                 self.save_v_pyj(prec.v_pyj);
             }
             if (prec.nodes_to_compile) {
-                ՐՏitr38 = ՐՏ_Iterable(prec.nodes_to_compile);
-                for (ՐՏidx38 = 0; ՐՏidx38 < ՐՏitr38.length; ՐՏidx38++) {
-                    it = ՐՏitr38[ՐՏidx38];
+                ՐՏitr36 = ՐՏ_Iterable(prec.nodes_to_compile);
+                for (ՐՏidx36 = 0; ՐՏidx36 < ՐՏitr36.length; ՐՏidx36++) {
+                    it = ՐՏitr36[ՐՏidx36];
                     if (compiler = self.compilers[it.compiler]) {
                         try {
                             it.node.child_nodes[0] = compiler(it.node.child_nodes[0]);
@@ -3504,7 +2799,7 @@ var ՐՏ_modules = {};
     }
     _rml_test_str_ = "\ndef RS(%tag = script, %verbatim,  type = \"text/js\" ):\n$asd = DDDDDD\ndef tt():\n    div(d=\"df dfsdf\\\" g\"):\n        span(in_tt = 'qq'):\n            RS():\n                'sdfsdfsdsdfsdf sdf '\n                {function();\n                    dsfsdf;\n                    e = /\\$.+/.exec('sdfsdf')\n                }\n                 fsdfsd\n\n!DOCTYPE(html):\ndiv():\n    tt():\n    RS(some = 'wer1'):\n    span(as = '$asd', g= '\\$event'):\n        ul:\n            li:\n                i(class = 'sdsd'):\n            li:\n\ndef qq():\n    div():\n        qq1():\n        # dfsdf\n        'hi from qq-chunk'\ndef qq1():\n    #qq1():\n    div():\n        'hi from qq1-chunk'\n    span(name = 'qq1-chunk'):\n        'sdfsdf'\ndiv:\n    RS:\n        'adasd'\n        'sdasd'\nsvg:\n    qq1():\neditable(f = 'sdfsdf', @click = 'sdfdf()'):\nRS:\n\n";
     function load_markup(markup) {
-        var ՐՏitr39, ՐՏidx39;
+        var ՐՏitr37, ՐՏidx37;
         var html_tags, line, tag;
         html_tags = {};
         function read_line(ln) {
@@ -3515,9 +2810,9 @@ var ՐՏ_modules = {};
                 "close_meth": r[2]
             };
         }
-        ՐՏitr39 = ՐՏ_Iterable(markup.split("\n"));
-        for (ՐՏidx39 = 0; ՐՏidx39 < ՐՏitr39.length; ՐՏidx39++) {
-            line = ՐՏitr39[ՐՏidx39];
+        ՐՏitr37 = ՐՏ_Iterable(markup.split("\n"));
+        for (ՐՏidx37 = 0; ՐՏidx37 < ՐՏitr37.length; ՐՏidx37++) {
+            line = ՐՏitr37[ՐՏidx37];
             line = line.split("#")[0].trimRight();
             if (!line.trim()) {
                 continue;
@@ -3606,7 +2901,7 @@ var ՐՏ_modules = {};
             PYJ_CACHE[fp_no_ext + ".pyj"] = prec.v_pyj;
         }
         if (prec.v_css) {
-            prec.v_css.store_in = prec.v_css.store_in || fp_no_ext + ".css";
+            prec.v_css.store_in = prec.v_css.store_in || fp_no_ext.split("/")[fp_no_ext.split("/").length-1] + ".css";
             prec.v_css.stored_by = fp_no_ext.split("/").slice(2).join("/") + ".vuepy";
             if (!CSS_CACHE[prec.v_css.store_in]) {
                 CSS_CACHE[prec.v_css.store_in] = {};
@@ -3616,53 +2911,6 @@ var ՐՏ_modules = {};
         LAST_VUEPY_PREC.prec = prec;
         LAST_VUEPY_PREC.fp_no_ext = fp_no_ext;
         return prec;
-    }
-    function expand_import_dot2package(pyj_s, fp, fs) {
-        var package_pref;
-        function get_top_package(fp, fs) {
-            var ՐՏitr40, ՐՏidx40;
-            var pth, cp, i, d, ret;
-            pth = fp.split("/").slice(1, -1);
-            cp = "root";
-            i = 0;
-            ՐՏitr40 = ՐՏ_Iterable(pth);
-            for (ՐՏidx40 = 0; ՐՏidx40 < ՐՏitr40.length; ՐՏidx40++) {
-                d = ՐՏitr40[ՐՏidx40];
-                cp += "/" + d;
-                if (fs.id_by_path(cp + "/__init__.pyj")) {
-                    break;
-                }
-                ++i;
-            }
-            ret = pth.slice(i).join(".");
-            return ret;
-        }
-        package_pref = get_top_package(fp, fs);
-        package_pref = package_pref ? package_pref + "." : "";
-        function dot_expander(s, import_line, mod_as_names, from_import, dot_package) {
-            var ret;
-            if (import_line) {
-                mod_as_names = mod_as_names.split(/ *, */).map(function(mod_as_name) {
-                    var mod_name, mod, name;
-                    if (/^ *\./.test(mod_as_name)) {
-                        mod_name = mod_as_name.split(/ +as +/);
-                        mod = mod_name[0];
-                        name = mod_name[1] && mod_name[1].trim() || mod.replace(/^ *\./, "");
-                        mod_as_name = mod.replace(/^ *\./, package_pref) + " as " + name;
-                    }
-                    return mod_as_name;
-                });
-                ret = "import " + mod_as_names.join(", ");
-                ՐՏ_print(fp, s, " -> ", ret);
-                return ret;
-            } else if (from_import) {
-                dot_package = dot_package.replace(/^ *\./, package_pref);
-                ret = "from " + dot_package + " import ";
-                ՐՏ_print(fp, s, " -> ", ret);
-                return ret;
-            }
-        }
-        return pyj_s.replace(/(^import +(.*)$)|(^from +(\.[\w.]+) +import +)/gm, dot_expander);
     }
     function make_file_reader(fs) {
         class Read_ex extends Error {
@@ -3695,12 +2943,12 @@ var ՐՏ_modules = {};
                 }
                 ret = fs.files[fid].content;
             }
-            return expand_import_dot2package(ret, fp, fs);
+            return ret;
         }
         return read_file;
     }
     function vuepy_compile(s, fp, fs, opt) {
-        var ՐՏitr41, ՐՏidx41;
+        var ՐՏitr38, ՐՏidx38;
         var defs, fid, fp_no_ext, prec, v_js, it, compiler, css_frags;
         clear_cache();
         defs = {
@@ -3725,9 +2973,9 @@ var ՐՏ_modules = {};
         }
         LAST_VUEPY_PREC = {};
         if (prec.nodes_to_compile) {
-            ՐՏitr41 = ՐՏ_Iterable(prec.nodes_to_compile);
-            for (ՐՏidx41 = 0; ՐՏidx41 < ՐՏitr41.length; ՐՏidx41++) {
-                it = ՐՏitr41[ՐՏidx41];
+            ՐՏitr38 = ՐՏ_Iterable(prec.nodes_to_compile);
+            for (ՐՏidx38 = 0; ՐՏidx38 < ՐՏitr38.length; ՐՏidx38++) {
+                it = ՐՏitr38[ՐՏidx38];
                 if (compiler = opt.compilers[it.compiler]) {
                     try {
                         it.node.child_nodes[0] = compiler(it.node.child_nodes[0]);
@@ -3758,13 +3006,13 @@ var ՐՏ_modules = {};
             var out, out_pyj_s;
             out = [];
             function replacer(s, mod_as_names) {
-                var ՐՏitr42, ՐՏidx42;
+                var ՐՏitr39, ՐՏidx39;
                 var mod_as_name, mod, name;
                 is_amd_mod = true;
                 mod_as_names = mod_as_names.split(/ *, */);
-                ՐՏitr42 = ՐՏ_Iterable(mod_as_names);
-                for (ՐՏidx42 = 0; ՐՏidx42 < ՐՏitr42.length; ՐՏidx42++) {
-                    mod_as_name = ՐՏitr42[ՐՏidx42];
+                ՐՏitr39 = ՐՏ_Iterable(mod_as_names);
+                for (ՐՏidx39 = 0; ՐՏidx39 < ՐՏitr39.length; ՐՏidx39++) {
+                    mod_as_name = ՐՏitr39[ՐՏidx39];
                     mod_as_name = mod_as_name.split(/ +as +/);
                     mod = mod_as_name[0];
                     name = mod_as_name[1] || mod;
@@ -3775,19 +3023,19 @@ var ՐՏ_modules = {};
                 }
                 return "";
             }
-            out_pyj_s = pyj_s.replace(/^import_amd +(.*)\n/gm, replacer);
+            out_pyj_s = pyj_s.replace(/^import_amd +(.*?)(#.*)?\n/gm, replacer);
             return [ out, out_pyj_s ];
         }
         [mod_as_names, out_pyj_s] = get_amd_imports(pyj_s);
         function make_wrapper(mod_as_names) {
             function wrapper(js_s) {
-                var ՐՏitr43, ՐՏidx43;
+                var ՐՏitr40, ՐՏidx40;
                 var imports_arr, imports_as, mod_as_name;
                 imports_arr = [];
                 imports_as = [];
-                ՐՏitr43 = ՐՏ_Iterable(mod_as_names);
-                for (ՐՏidx43 = 0; ՐՏidx43 < ՐՏitr43.length; ՐՏidx43++) {
-                    mod_as_name = ՐՏitr43[ՐՏidx43];
+                ՐՏitr40 = ՐՏ_Iterable(mod_as_names);
+                for (ՐՏidx40 = 0; ՐՏidx40 < ՐՏitr40.length; ՐՏidx40++) {
+                    mod_as_name = ՐՏitr40[ՐՏidx40];
                     imports_arr.push('"' + mod_as_name.mod + "" + '"');
                     imports_as.push(mod_as_name.name);
                 }
@@ -3825,7 +3073,7 @@ var ՐՏ_modules = {};
         };
         opt = Object.assign({}, defs, opt);
         try {
-            s = s ? expand_import_dot2package(s, fp, fs) : opt.readfile(fp);
+            s = s || opt.readfile(fp);
             [amd_wrapper, pyj_s] = make_amd_wrapper(s);
             ret = compiler.compile(pyj_s, opt);
             ret = amd_wrapper(ret);
@@ -3844,10 +3092,10 @@ var ՐՏ_modules = {};
         return ret;
     }
     function maybe_vuepy_error(err) {
-        var ՐՏ_23;
+        var ՐՏ_16;
         var err_fp_no_ext;
         err_fp_no_ext = err.filename && err.filename.split(/\.[^.]+$/)[0];
-        if (err_fp_no_ext && LAST_VUEPY_PREC.fp_no_ext && ((ՐՏ_23 = LAST_VUEPY_PREC.fp_no_ext) === err_fp_no_ext || typeof ՐՏ_23 === "object" && ՐՏ_eq(ՐՏ_23, err_fp_no_ext))) {
+        if (err_fp_no_ext && LAST_VUEPY_PREC.fp_no_ext && ((ՐՏ_16 = LAST_VUEPY_PREC.fp_no_ext) === err_fp_no_ext || typeof ՐՏ_16 === "object" && ՐՏ_eq(ՐՏ_16, err_fp_no_ext))) {
             err.filename = err_fp_no_ext + ".vuepy";
             LAST_VUEPY_PREC.prec.raise_v_pyj_err(err);
         }
@@ -3868,8 +3116,6 @@ var ՐՏ_modules = {};
 
     ՐՏ_modules["asset.vuepy_compiler"]["vuepy_precompile"] = vuepy_precompile;
 
-    ՐՏ_modules["asset.vuepy_compiler"]["expand_import_dot2package"] = expand_import_dot2package;
-
     ՐՏ_modules["asset.vuepy_compiler"]["make_file_reader"] = make_file_reader;
 
     ՐՏ_modules["asset.vuepy_compiler"]["vuepy_compile"] = vuepy_compile;
@@ -3889,7 +3135,7 @@ var ՐՏ_modules = {};
     
     "\noutput_path_map = {\n    'html': def(pth): return '/templates/' +                 pth.split(///).filter(def(x): return x and x != 'root';)[1:].join('/') + '.html';,\n    'js': '/static/js/',\n    'css': '/static/css/',\n }\n";
     function update_css(css, frags_to_update) {
-        var ՐՏitr44, ՐՏidx44;
+        var ՐՏitr41, ՐՏidx41;
         var stored_frags, css_head, updated_frags, out, stored_by, section;
         function parse_css(css) {
             var re_splitter, frags, stored_frags, i, stored_by, content;
@@ -3914,21 +3160,21 @@ var ՐՏ_modules = {};
         delete stored_frags._css_head_;
         updated_frags = Object.assign({}, stored_frags, frags_to_update);
         out = [];
-        ՐՏitr44 = ՐՏ_Iterable(updated_frags);
-        for (ՐՏidx44 = 0; ՐՏidx44 < ՐՏitr44.length; ՐՏidx44++) {
-            stored_by = ՐՏitr44[ՐՏidx44];
+        ՐՏitr41 = ՐՏ_Iterable(updated_frags);
+        for (ՐՏidx41 = 0; ՐՏidx41 < ՐՏitr41.length; ՐՏidx41++) {
+            stored_by = ՐՏitr41[ՐՏidx41];
             section = "\n/*---------< " + stored_by + " >-------------*/\n";
             out.push(section + updated_frags[stored_by]);
         }
         return css_head + out.join("");
     }
-    var store_css = (ՐՏ_24 = function store_css(css_to_store, opath, fs) {
-        var ՐՏitr45, ՐՏidx45;
+    var store_css = (ՐՏ_17 = function store_css(css_to_store, opath, fs) {
+        var ՐՏitr42, ՐՏidx42;
         var opath_id, css_file, fp, fid, css_s;
         opath_id = fs.id_by_path(opath);
-        ՐՏitr45 = ՐՏ_Iterable(css_to_store);
-        for (ՐՏidx45 = 0; ՐՏidx45 < ՐՏitr45.length; ՐՏidx45++) {
-            css_file = ՐՏitr45[ՐՏidx45];
+        ՐՏitr42 = ՐՏ_Iterable(css_to_store);
+        for (ՐՏidx42 = 0; ՐՏidx42 < ՐՏitr42.length; ՐՏidx42++) {
+            css_file = ՐՏitr42[ՐՏidx42];
             fp = fs.path_join(opath, css_file);
             fid = fs.id_by_path(fp);
             if (!fid) {
@@ -3937,17 +3183,17 @@ var ՐՏ_modules = {};
             css_s = update_css(fs.files[fid].content, css_to_store[css_file]);
             fs.write_file(fid, css_s);
         }
-    }, Object.defineProperty(ՐՏ_24, "__doc__", {
+    }, Object.defineProperty(ՐՏ_17, "__doc__", {
         value: "css_to_store is a hash:\n    'a.css' :\n        'foo.vuepy': \"a { color: black } ...\"\n        'bar.vuepy': \"div.error { color: red } ...\"\n        ...\n    ..."
-    }), ՐՏ_24);
+    }), ՐՏ_17);
     function output(compiled, fs, output_path_map) {
-        var ՐՏitr46, ՐՏidx46;
+        var ՐՏitr43, ՐՏidx43;
         var fp, ps, ext, ofp, opath, fid;
         fp = compiled.src;
         ps = fs_path.path_split(fp);
-        ՐՏitr46 = ՐՏ_Iterable(compiled);
-        for (ՐՏidx46 = 0; ՐՏidx46 < ՐՏitr46.length; ՐՏidx46++) {
-            ext = ՐՏitr46[ՐՏidx46];
+        ՐՏitr43 = ՐՏ_Iterable(compiled);
+        for (ՐՏidx43 = 0; ՐՏidx43 < ՐՏitr43.length; ՐՏidx43++) {
+            ext = ՐՏitr43[ՐՏidx43];
             if (ext === "src" || !compiled[ext]) {
                 continue;
             }
@@ -4074,9 +3320,9 @@ var ՐՏ_modules = {};
                         ret[k] = v.slice(0);
                     } else if (v instanceof Object && !(v instanceof Function)) {
                         ret[k] = (function() {
-                            var ՐՏidx47, ՐՏitr47 = ՐՏ_Iterable(v), ՐՏres = {}, _;
-                            for (ՐՏidx47 = 0; ՐՏidx47 < ՐՏitr47.length; ՐՏidx47++) {
-                                _ = ՐՏitr47[ՐՏidx47];
+                            var ՐՏidx44, ՐՏitr44 = ՐՏ_Iterable(v), ՐՏres = {}, _;
+                            for (ՐՏidx44 = 0; ՐՏidx44 < ՐՏitr44.length; ՐՏidx44++) {
+                                _ = ՐՏitr44[ՐՏidx44];
                                 ՐՏres[_] = v[_];
                             }
                             return ՐՏres;
@@ -4091,7 +3337,7 @@ var ՐՏ_modules = {};
                 return ret;
             }
             dedent_process (stream) {
-                var ՐՏ_25;
+                var ՐՏ_18;
                 var self = this;
                 var indented;
                 indented = stream.indentation();
@@ -4107,7 +3353,7 @@ var ՐՏ_modules = {};
                     }
                 }
                 return {
-                    error: ((ՐՏ_25 = self.scopes[self.scopes.length-1].offset) !== indented && (typeof ՐՏ_25 !== "object" || !ՐՏ_eq(ՐՏ_25, indented)))
+                    error: ((ՐՏ_18 = self.scopes[self.scopes.length-1].offset) !== indented && (typeof ՐՏ_18 !== "object" || !ՐՏ_eq(ՐՏ_18, indented)))
                 };
             }
             token_re (stream) {
@@ -4136,28 +3382,26 @@ var ՐՏ_modules = {};
                 if (sol) {
                     indent = self.indent = stream.indentation();
                     if (/^tag(_inline)?$/.test(self.scopes[self.scopes.length-1].type)) {
-                        {
-                            scope_offset = self.scopes[self.scopes.length-1].offset;
-                            if (stream.eatSpace()) {
-                                line_offset = indent;
-                                if (line_offset > scope_offset) {
-                                    self.push_scope(stream, "tag");
-                                } else if (line_offset < scope_offset && self.dedent_process(stream).error) {
-                                    stream.skipToEnd();
-                                    return ERRORCLASS;
-                                } else if (self.scopes[self.scopes.length-1].type === "tag_inline") {
-                                    while (self.scopes[self.scopes.length-1].type === "tag_inline") {
-                                        self.scopes.pop();
-                                    }
+                        scope_offset = self.scopes[self.scopes.length-1].offset;
+                        if (stream.eatSpace()) {
+                            line_offset = indent;
+                            if (line_offset > scope_offset) {
+                                self.push_scope(stream, "tag");
+                            } else if (line_offset < scope_offset && self.dedent_process(stream).error) {
+                                stream.skipToEnd();
+                                return ERRORCLASS;
+                            } else if (self.scopes[self.scopes.length-1].type === "tag_inline") {
+                                while (self.scopes[self.scopes.length-1].type === "tag_inline") {
+                                    self.scopes.pop();
                                 }
-                                return null;
-                            } else {
-                                style = self.token_baseInner(stream);
-                                if (scope_offset > 0 && self.dedent_process(stream).error) {
-                                    style += " " + ERRORCLASS;
-                                }
-                                return style;
                             }
+                            return null;
+                        } else {
+                            style = self.token_baseInner(stream);
+                            if (scope_offset > 0 && self.dedent_process(stream).error) {
+                                style += " " + ERRORCLASS;
+                            }
+                            return style;
                         }
                     }
                 }
@@ -4324,14 +3568,14 @@ var ՐՏ_modules = {};
                 });
             }
             token_lexer (stream) {
-                var ՐՏ_26, ՐՏ_27, ՐՏ_28, ՐՏ_29;
+                var ՐՏ_19, ՐՏ_20, ՐՏ_21, ՐՏ_22;
                 var self = this;
                 var style, current, scope, def_tag_attrs, re_attr, attr_value, delimiter_index;
                 style = self.tokenize(stream);
                 current = stream.current();
                 if (current === ".") {
                     style = stream.match(identifiers, false) ? null : ERRORCLASS;
-                    if ((style === (ՐՏ_26 = null) || typeof style === "object" && ՐՏ_eq(style, ՐՏ_26)) && self.lastStyle === "meta") {
+                    if ((style === (ՐՏ_19 = null) || typeof style === "object" && ՐՏ_eq(style, ՐՏ_19)) && self.lastStyle === "meta") {
                         style = "meta";
                     }
                     return style;
@@ -4384,12 +3628,12 @@ var ՐՏ_modules = {};
                 }
                 if (style && style.startsWith("punctuation")) {
                     delimiter_index = current.length === 1 ? "[({".indexOf(current) : -1;
-                    if ((delimiter_index !== (ՐՏ_27 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_27)))) {
+                    if ((delimiter_index !== (ՐՏ_20 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_20)))) {
                         self.push_scope(stream, "])}"[delimiter_index]);
                     } else {
                         delimiter_index = "])}".indexOf(current);
-                        if ((delimiter_index !== (ՐՏ_28 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_28)))) {
-                            if (((ՐՏ_29 = self.scopes[self.scopes.length-1].type) === current || typeof ՐՏ_29 === "object" && ՐՏ_eq(ՐՏ_29, current))) {
+                        if ((delimiter_index !== (ՐՏ_21 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_21)))) {
+                            if (((ՐՏ_22 = self.scopes[self.scopes.length-1].type) === current || typeof ՐՏ_22 === "object" && ՐՏ_eq(ՐՏ_22, current))) {
                                 self.scopes.pop();
                             } else {
                                 return ERRORCLASS;
@@ -4405,7 +3649,7 @@ var ՐՏ_modules = {};
             return rml_mode.start_state(basecolumn);
         }
         function token(stream, state) {
-            var ՐՏ_30, ՐՏ_31;
+            var ՐՏ_23, ՐՏ_24;
             var scope, r, local_state, mode_name, mode, style, current;
             scope = state.scopes[state.scopes.length-1];
             if (stream.sol()) {
@@ -4425,7 +3669,7 @@ var ՐՏ_modules = {};
                 }
                 r = null;
                 if (!(local_state = state.local_state) && (mode_name = get_mode())) {
-                    if (stream.indentation() >= scope.offset || ((ՐՏ_30 = scope.offset - indentUnit) === (ՐՏ_31 = stream.indentation()) || typeof ՐՏ_30 === "object" && ՐՏ_eq(ՐՏ_30, ՐՏ_31)) && (r = stream.match(/^(\s*)\+{3}(\s|#.*)*$/))) {
+                    if (stream.indentation() >= scope.offset || ((ՐՏ_23 = scope.offset - indentUnit) === (ՐՏ_24 = stream.indentation()) || typeof ՐՏ_23 === "object" && ՐՏ_eq(ՐՏ_23, ՐՏ_24)) && (r = stream.match(/^(\s*)\+{3}(\s|#.*)*$/))) {
                         mode = CodeMirror.getMode(conf, mode_name);
                         state.local_state = CodeMirror.startState(mode, stream.indentation());
                         state.local_mode = mode;
@@ -4465,7 +3709,7 @@ var ՐՏ_modules = {};
             return style;
         }
         function indent(state, textAfter) {
-            var ՐՏ_32, ՐՏ_33, ՐՏ_34, ՐՏ_35, ՐՏ_36, ՐՏ_37;
+            var ՐՏ_25, ՐՏ_26, ՐՏ_27, ՐՏ_28, ՐՏ_29, ՐՏ_30;
             var scope, closing;
             if (state.local_mode) {
                 if (state.local_mode.indent) {
@@ -4474,15 +3718,15 @@ var ՐՏ_modules = {};
                     return CodeMirror.Pass;
                 }
             }
-            if (((ՐՏ_32 = state.tokenize) !== (ՐՏ_33 = rml_mode.token_base) && (typeof ՐՏ_32 !== "object" || !ՐՏ_eq(ՐՏ_32, ՐՏ_33)))) {
+            if (((ՐՏ_25 = state.tokenize) !== (ՐՏ_26 = rml_mode.token_base) && (typeof ՐՏ_25 !== "object" || !ՐՏ_eq(ՐՏ_25, ՐՏ_26)))) {
                 return state.tokenize && state.tokenize.isString ? CodeMirror.Pass : 0;
             }
             scope = state.scopes[state.scopes.length-1];
             if (scope.type === '"' || scope.type === "'") {
                 return CodeMirror.Pass;
             }
-            closing = textAfter && ((ՐՏ_34 = textAfter.charAt(0)) === (ՐՏ_35 = scope.type) || typeof ՐՏ_34 === "object" && ՐՏ_eq(ՐՏ_34, ՐՏ_35));
-            if (((ՐՏ_36 = scope.align) !== (ՐՏ_37 = null) && (typeof ՐՏ_36 !== "object" || !ՐՏ_eq(ՐՏ_36, ՐՏ_37)))) {
+            closing = textAfter && ((ՐՏ_27 = textAfter.charAt(0)) === (ՐՏ_28 = scope.type) || typeof ՐՏ_27 === "object" && ՐՏ_eq(ՐՏ_27, ՐՏ_28));
+            if (((ՐՏ_29 = scope.align) !== (ՐՏ_30 = null) && (typeof ՐՏ_29 !== "object" || !ՐՏ_eq(ՐՏ_29, ՐՏ_30)))) {
                 return scope.align - (closing && state.lastToken !== "," ? 1 : 0);
             } else if (closing && state.scopes.length > 1) {
                 return state.scopes[state.scopes.length-2].offset;
@@ -4612,7 +3856,7 @@ var ՐՏ_modules = {};
                 });
             }
             dedent_process (stream) {
-                var ՐՏ_38;
+                var ՐՏ_31;
                 var self = this;
                 var indented;
                 indented = stream.indentation();
@@ -4628,7 +3872,7 @@ var ՐՏ_modules = {};
                     }
                 }
                 return {
-                    error: ((ՐՏ_38 = self.scopes[self.scopes.length-1].offset) !== indented && (typeof ՐՏ_38 !== "object" || !ՐՏ_eq(ՐՏ_38, indented)))
+                    error: ((ՐՏ_31 = self.scopes[self.scopes.length-1].offset) !== indented && (typeof ՐՏ_31 !== "object" || !ՐՏ_eq(ՐՏ_31, indented)))
                 };
             }
             token_re (stream) {
@@ -4806,7 +4050,7 @@ var ՐՏ_modules = {};
                 });
             }
             token_lexer (stream) {
-                var ՐՏ_39, ՐՏ_40, ՐՏ_41, ՐՏ_42;
+                var ՐՏ_32, ՐՏ_33, ՐՏ_34, ՐՏ_35;
                 var self = this;
                 var style, current, delimiter_index;
                 style = self.tokenize(stream);
@@ -4814,7 +4058,7 @@ var ՐՏ_modules = {};
                 self.is_glueLine = false;
                 if (current === ".") {
                     style = stream.match(identifiers, false) ? null : ERRORCLASS;
-                    if ((style === (ՐՏ_39 = null) || typeof style === "object" && ՐՏ_eq(style, ՐՏ_39)) && self.lastStyle === "meta") {
+                    if ((style === (ՐՏ_32 = null) || typeof style === "object" && ՐՏ_eq(style, ՐՏ_32)) && self.lastStyle === "meta") {
                         style = "meta";
                     }
                     return style;
@@ -4847,12 +4091,12 @@ var ՐՏ_modules = {};
                     }
                 } else {
                     delimiter_index = current.length === 1 ? "[({".indexOf(current) : -1;
-                    if ((delimiter_index !== (ՐՏ_40 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_40)))) {
+                    if ((delimiter_index !== (ՐՏ_33 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_33)))) {
                         self.push_scope(stream, "])}"[delimiter_index]);
                     } else {
                         delimiter_index = "])}".indexOf(current);
-                        if ((delimiter_index !== (ՐՏ_41 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_41)))) {
-                            if (((ՐՏ_42 = self.scopes[self.scopes.length-1].type) === current || typeof ՐՏ_42 === "object" && ՐՏ_eq(ՐՏ_42, current))) {
+                        if ((delimiter_index !== (ՐՏ_34 = -1) && (typeof delimiter_index !== "object" || !ՐՏ_eq(delimiter_index, ՐՏ_34)))) {
+                            if (((ՐՏ_35 = self.scopes[self.scopes.length-1].type) === current || typeof ՐՏ_35 === "object" && ՐՏ_eq(ՐՏ_35, current))) {
                                 self.scopes.pop();
                             } else {
                                 return ERRORCLASS;
@@ -4902,18 +4146,18 @@ var ՐՏ_modules = {};
             return style;
         }
         function indent(state, textAfter) {
-            var ՐՏ_43, ՐՏ_44, ՐՏ_45, ՐՏ_46, ՐՏ_47, ՐՏ_48;
+            var ՐՏ_36, ՐՏ_37, ՐՏ_38, ՐՏ_39, ՐՏ_40, ՐՏ_41;
             var scope, closing;
             rs_mode.load_state(state);
-            if (rs_mode.tokenize && ((ՐՏ_43 = rs_mode.tokenize) !== (ՐՏ_44 = rs_mode.token_base) && (typeof ՐՏ_43 !== "object" || !ՐՏ_eq(ՐՏ_43, ՐՏ_44)))) {
+            if (rs_mode.tokenize && ((ՐՏ_36 = rs_mode.tokenize) !== (ՐՏ_37 = rs_mode.token_base) && (typeof ՐՏ_36 !== "object" || !ՐՏ_eq(ՐՏ_36, ՐՏ_37)))) {
                 return rs_mode.tokenize.isString ? CodeMirror.Pass : 0;
             }
             scope = rs_mode.scopes[rs_mode.scopes.length-1];
             if (scope.type === ":") {
                 return CodeMirror.Pass;
             }
-            closing = textAfter && ((ՐՏ_45 = textAfter.charAt(0)) === (ՐՏ_46 = scope.type) || typeof ՐՏ_45 === "object" && ՐՏ_eq(ՐՏ_45, ՐՏ_46));
-            if (((ՐՏ_47 = scope.align) !== (ՐՏ_48 = null) && (typeof ՐՏ_47 !== "object" || !ՐՏ_eq(ՐՏ_47, ՐՏ_48)))) {
+            closing = textAfter && ((ՐՏ_38 = textAfter.charAt(0)) === (ՐՏ_39 = scope.type) || typeof ՐՏ_38 === "object" && ՐՏ_eq(ՐՏ_38, ՐՏ_39));
+            if (((ՐՏ_40 = scope.align) !== (ՐՏ_41 = null) && (typeof ՐՏ_40 !== "object" || !ՐՏ_eq(ՐՏ_40, ՐՏ_41)))) {
                 return scope.align - (closing && state.lastToken !== "," ? 1 : 0);
             } else if (closing && rs_mode.scopes.length > 1) {
                 return rs_mode.scopes[rs_mode.scopes.length - 2].offset;
@@ -4946,6 +4190,1009 @@ var ՐՏ_modules = {};
 })();
 
 (function(){
+    var __name__ = "asset";
+
+    ՐՏ_modules["asset"]["rs_vue"] = ՐՏ_modules["asset.rs_vue"];
+
+    ՐՏ_modules["asset"]["common"] = ՐՏ_modules["asset.common"];
+
+    ՐՏ_modules["asset"]["fs_path"] = ՐՏ_modules["asset.fs_path"];
+
+    ՐՏ_modules["asset"]["fs"] = ՐՏ_modules["asset.fs"];
+
+    ՐՏ_modules["asset"]["html_ml"] = ՐՏ_modules["asset.html_ml"];
+
+    ՐՏ_modules["asset"]["vuepy_parser"] = ՐՏ_modules["asset.vuepy_parser"];
+
+    ՐՏ_modules["asset"]["vuepy_compiler"] = ՐՏ_modules["asset.vuepy_compiler"];
+
+    ՐՏ_modules["asset"]["vuepy_output"] = ՐՏ_modules["asset.vuepy_output"];
+
+    ՐՏ_modules["asset"]["cm_vuepy"] = ՐՏ_modules["asset.cm_vuepy"];
+
+    ՐՏ_modules["asset"]["cm_rapydscript"] = ՐՏ_modules["asset.cm_rapydscript"];
+})();
+
+(function(){
+    var __name__ = "components.confirm";
+    var templ, vc;
+    templ = "\n<div  class = 'confirm lifted'>\n    <div>{{message}}</div>\n    <div  style = 'text-align:right;padding-top:10px;'>\n        <button  type = 'button' @click = '$emit(\"close\", \"ok\")'>OK</button>\n        <button  type = 'button' @click = '$emit(\"close\", \"cancel\")'>Cancel</button>\n    </div>\n</div>\n";
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
+    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
+    
+    vc = new V_collector();
+    class Confirm extends RS_vue {
+        constructor () {
+            super(vc);
+            var self = this;
+            self.template = templ;
+            self.map_store = {};
+            self.props = {
+                message: String
+            };
+        }
+        _init_data () {
+            var self = this;
+            var ret;
+            ret = {};
+            return ret;
+        }
+    }
+    function make() {
+        return new Confirm();
+    }
+    function main() {
+    }
+    if (__name__ === "__main__") {
+        main();
+    }
+    ՐՏ_modules["components.confirm"]["templ"] = templ;
+
+    ՐՏ_modules["components.confirm"]["vc"] = vc;
+
+    ՐՏ_modules["components.confirm"]["Confirm"] = Confirm;
+
+    ՐՏ_modules["components.confirm"]["make"] = make;
+
+    ՐՏ_modules["components.confirm"]["main"] = main;
+})();
+
+(function(){
+    var __name__ = "components.error";
+    var templ, vc;
+    templ = "\n<div  style = 'white-space:nowrap;'>\n    <template  v-if = 'err'>\n        <div>\n            {{err.message}}\n        </div>\n        <div  @click = 'open_file' style = 'cursor:pointer; text-align:right;' class = 'orange'>\n            {{err_lc.filename}}: [{{err_lc.line}}:{{err_lc.col}}]\n        </div>\n    </template>\n</div>\n";
+    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
+    
+    vc = new V_collector();
+    var CError = (ՐՏ_42 = class CError extends RS_vue {
+        constructor () {
+            super(vc);
+            var self = this;
+            self.template = templ;
+            self.map_store = {
+                err: "compile_error",
+                open: "/editor.open*",
+                set_cursor: "/editor.set_cursor*"
+            };
+        }
+        _init_data () {
+            var self = this;
+            var ret;
+            ret = {};
+            return ret;
+        }
+        err_lc () {
+            var self = this;
+            return self.err.readfile_error || self.err;
+        }
+        open_file () {
+            var self = this;
+            self.open(self.err_lc.filename, "w0");
+            self.set_cursor(self.err_lc.line - 1, self.err_lc.col);
+        }
+    }, (function(){
+        Object.defineProperties(ՐՏ_42.prototype, {
+            err_lc: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.computed(ՐՏ_42.prototype.err_lc)
+            },
+            open_file: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_42.prototype.open_file)
+            }
+        });
+        ;
+    })(), ՐՏ_42);
+    function make() {
+        return new CError();
+    }
+    if (__name__ === "__main__") {
+        main();
+    }
+    ՐՏ_modules["components.error"]["templ"] = templ;
+
+    ՐՏ_modules["components.error"]["vc"] = vc;
+
+    ՐՏ_modules["components.error"]["CError"] = CError;
+
+    ՐՏ_modules["components.error"]["make"] = make;
+})();
+
+(function(){
+    var __name__ = "components.app_selector";
+    var templ, vc;
+    templ = "\n<div  class = 'app_list lifted'>\n    <h5>Choose app to edit:</h5>\n    <ul>\n        <li  class = 'app_list-item' v-for = 'app in app_list'>\n            <a  :class = \"app == cur_app ? 'orange' : 'gray'\" class = 'btn' href = \"#\" @click = '$emit(\"close\", app)'>\n                {{app}}\n            </a>\n        </li>\n    </ul>\n    <div  style = 'text-align:right;'>\n        <button  type = 'button' class = 'blue' @click = '$emit(\"close\", \"cancel\")'>Cancel</button>\n    </div>\n</div>\n";
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
+    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
+    
+    vc = new V_collector();
+    class App_selector extends RS_vue {
+        constructor () {
+            super(vc);
+            var self = this;
+            self.template = templ;
+            self.map_store = {};
+            self.props = {
+                app_list: Array,
+                cur_app: String
+            };
+        }
+        _init_data () {
+            var self = this;
+            var ret;
+            ret = {};
+            return ret;
+        }
+    }
+    function make() {
+        return new App_selector();
+    }
+    function main() {
+    }
+    if (__name__ === "__main__") {
+        main();
+    }
+    ՐՏ_modules["components.app_selector"]["templ"] = templ;
+
+    ՐՏ_modules["components.app_selector"]["vc"] = vc;
+
+    ՐՏ_modules["components.app_selector"]["App_selector"] = App_selector;
+
+    ՐՏ_modules["components.app_selector"]["make"] = make;
+
+    ՐՏ_modules["components.app_selector"]["main"] = main;
+})();
+
+(function(){
+    var __name__ = "components.vform";
+    var templ_form, vc;
+    templ_form = "\n<div  class = 'container'>\n    <form  enctype = \"multipart/form-data\" ref = 'form' :name = 'form_name'>\n        <div  class = 'lifted rounded'>\n            <div  class = 'title center black '>\n                {{title}}\n            </div>\n            <div  class = 'padded'>\n                <div  v-for = 'field in fields' class = 'container'>\n                    <template  v-if = 'field.slot'>\n                        <slot  :field = 'field'></slot>\n                    </template>\n                    <template  v-else>\n                        <label  class = 'right' :class = 'label_w' v-html = 'field.label'></label>\n                        <div  :class = 'input_w'>\n                            <component  :is = 'map_component(field.type)' v-bind = 'field.cmp_args'></component>\n                        </div>\n                    </template>\n                </div>\n                <div  class = 'container'>\n                    <label  :class = 'label_w'>\n                        \n                    </label>\n                    <div  :class = 'input_w' style = 'padding:0.3em'>\n                        <button  v-for = 'action in actions' class = 'btn' type = 'button' @click = 'fire(action)'>\n                            {{action}}\n                        </button>\n                    </div>\n                </div>\n            </div>\n        </div>\n    </form>\n</div>\n";
+    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
+    
+    vc = new V_collector();
+    var vForm = (ՐՏ_43 = class vForm extends RS_vue {
+        constructor () {
+            super(vc);
+            var self = this;
+            self.template = templ_form;
+            self.props = {
+                title: {
+                    type: String,
+                    default: "Form"
+                },
+                record: Object,
+                fields: Array,
+                label_w: {
+                    type: String,
+                    default: "quarter"
+                },
+                input_w: {
+                    type: String,
+                    default: "threequarters"
+                },
+                actions: Array,
+                form_name: String
+            };
+        }
+        _init_data () {
+            var self = this;
+            var ret;
+            ret = {};
+            return ret;
+        }
+        fire (action) {
+            var self = this;
+            var formData;
+            formData = new FormData(self.$refs.form);
+            self.$emit("action", action, formData);
+        }
+        map_component (ftype) {
+            var self = this;
+            return "input";
+        }
+    }, (function(){
+        Object.defineProperties(ՐՏ_43.prototype, {
+            fire: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_43.prototype.fire)
+            },
+            map_component: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_43.prototype.map_component)
+            }
+        });
+        ;
+    })(), ՐՏ_43);
+    function make() {
+        return new vForm();
+    }
+    if (__name__ === "__main__") {
+    }
+    ՐՏ_modules["components.vform"]["templ_form"] = templ_form;
+
+    ՐՏ_modules["components.vform"]["vc"] = vc;
+
+    ՐՏ_modules["components.vform"]["vForm"] = vForm;
+
+    ՐՏ_modules["components.vform"]["make"] = make;
+})();
+
+(function(){
+    var __name__ = "components.login";
+    var templ_login, vc;
+    templ_login = "\n<div  class = 'login'>\n    <vform  \n        form_name = 'login' \n        :fields = 'fields' \n        :actions = 'actions' \n        @action = 'login_click' \n        title = 'Login' \n        label_w = 'quarter' \n        style = 'width:300px'></vform>\n</div>\n";
+    var vform = ՐՏ_modules["components.vform"];
+    
+    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
+    
+    var asyncer = ՐՏ_modules["asset.common"].asyncer;
+    
+    vc = new V_collector();
+    var Login = (ՐՏ_44 = class Login extends RS_vue {
+        constructor () {
+            super(vc);
+            var self = this;
+            self.template = templ_login;
+            self.components = {
+                vform: vform.make()
+            };
+            self.map_store = {
+                "login": "login*",
+                "is_logged": "is_logged",
+                "flash": "flash*"
+            };
+        }
+        _init_data () {
+            var self = this;
+            var ret;
+            ret = {
+                fields: [ {
+                    label: '<i class="fa fa-key"></i>',
+                    type: "password",
+                    cmp_args: {
+                        name: "password",
+                        type: "password",
+                        placeholder: "pwd"
+                    }
+                } ],
+                actions: [ "OK" ]
+            };
+            return ret;
+        }
+        mounted () {
+            var self = this;
+            self.$el.style.visibility = "visible";
+            self.$el.style.opacity = 1;
+        }
+        *login_click (action, data) {
+            var self = this;
+            yield self.login(data);
+            if (self.is_logged) {
+                self.$emit("close", true);
+                self.flash("Hi!", "ok");
+            } else {
+                self.flash("invalid password", "error");
+            }
+        }
+    }, (function(){
+        Object.defineProperties(ՐՏ_44.prototype, {
+            login_click: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(asyncer(ՐՏ_44.prototype.login_click))
+            }
+        });
+        ;
+    })(), ՐՏ_44);
+    function make() {
+        return new Login();
+    }
+    if (__name__ === "__main__") {
+    }
+    ՐՏ_modules["components.login"]["templ_login"] = templ_login;
+
+    ՐՏ_modules["components.login"]["vc"] = vc;
+
+    ՐՏ_modules["components.login"]["Login"] = Login;
+
+    ՐՏ_modules["components.login"]["make"] = make;
+})();
+
+(function(){
+    var __name__ = "components.folder_content";
+    var templ_folder_content, vc;
+    templ_folder_content = "\n<div>\n    <span>\n        <ul  class = 'bar path'>\n            <li  v-for = 'dir in path' @click = 'change_dir(dir.id)'>\n                <span>\n                    {{dir.name}}\n                </span>\n            </li>\n            <li  class = 'hover_off'>\n                <input  ref = 'new' style = 'width:180px;' :value = 'save_as && save_as.name' placeholder = 'newfile.py'/>\n                <template  v-if = 'save_as'>\n                    <button  type = 'button' class = 'v-btn' @click = \"(action('save_as', {name: $refs.new.value, content: save_as.content}),  $refs.new.value ='')\">\n                        Save\n                    </button>\n                </template>\n                <template  v-else>\n                    <button  type = 'button' class = 'v-btn' @click = \"(action('create', $refs.new.value),  $refs.new.value ='')\">\n                        Create\n                    </button>\n                    <button  type = 'button' class = 'v-btn' @click = \"action('upload')\">\n                        Upload\n                    </button>\n                </template>\n            </li>\n        </ul>\n    </span>\n    <ul  class = 'bar'>\n        <li  v-for = 'it in actions' @click = 'it.disabled || action(it.name)' class = 'inverse' :disabled = 'it.disabled'>\n            {{it.label}}\n            <span  v-if = 'selected_cnt(it.name)>0' style = 'color:red;background-color:white; padding: 0 5px; border-radius: 10px;'>{{selected_cnt(it.name)}}</span>\n        </li>\n    </ul>\n    <table  class = 'folder'>\n        <thead>\n            <tr>\n                <th  v-for = 'fld, idx in fields' :colspan = 'idx == 0 ? 2 : 1'>\n                    {{fld.label}}\n                </th>\n                <th  v-if = 'row_actions'>\n                    actions\n                </th>\n            </tr>\n            <tr  style = 'height: 0px'>\n                <th  style = 'width:20px;'/>\n                <th  v-for = 'fld in fields' :style = \"{width: (fld.width || 'initial')}\"/>\n                <th  v-if = 'row_actions' style = 'width:50px;'/>\n            </tr>\n        </thead>\n    </table>\n    <div  style = 'max-height: 65vh; overflow:auto;'>\n        <table  class = 'folder'>\n            <thead>\n                <tr  style = 'height: 0px'>\n                    <th  style = 'width:20px;'/>\n                    <th  v-for = 'fld in fields' :style = \"{width: (fld.width || 'initial')}\"/>\n                    <th  v-if = 'row_actions' style = 'width:50px;'/>\n                </tr>\n            </thead>\n            <tbody>\n                <tr  v-for = 'row in rows_c' @click = 'toggle_select(row.id)' :key = 'row.id' :class = '{selected: selected[row.id]}'>\n                    <td>\n                        <i  class = 'clickable' :class = 'row._icon_.class' :style = 'row._icon_.style' @click.stop = 'click(row.id)'></i>\n                    </td>\n                    <td  v-for = 'fld, idx in fields'>\n                        <template  v-if = 'idx==0'>\n                            <span  class = 'clickable' @click.stop = 'click(row.id)'>\n                                {{row[fld.name]}}\n                            </span>\n                        </template>\n                        <template  v-else>\n                            <span>\n                                {{row[fld.name]}}\n                            </span>\n                        </template>\n                    </td>\n                    <td  v-if = 'row_actions'>\n                        <span  v-for = 'ract in row_actions(row)' style = 'margin-right:3px;'>\n                            <i  class = 'clickable' :class = 'ract.icon.class' :style = 'ract.icon.style' @click.stop = 'action(ract.name, row.id)'></i>\n                        </span>\n                    </td>\n                </tr>\n            </tbody>\n        </table>\n    </div>\n</div>\n";
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
+    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
+    
+    var blur_click_listener = ՐՏ_modules["asset.common"].blur_click_listener;
+    
+    function it_by_path(obj, path) {
+        var cur;
+        if (!(path instanceof Array)) {
+            path = path.split(".");
+        }
+        cur = obj;
+        path.forEach(function(p) {
+            cur = cur[p];
+        });
+        return cur;
+    }
+    vc = new V_collector();
+    var Folder_content = (ՐՏ_45 = class Folder_content extends RS_vue {
+        constructor () {
+            super(vc);
+            var self = this;
+            self.template = templ_folder_content;
+            self.map_store = {
+                type_field: "/explorer.type_field",
+                fields: "/explorer.fields",
+                rows: "/explorer.list_dir",
+                sort_by: "/explorer.sort_by",
+                selected: "/explorer.selected",
+                path: "/explorer.path_arr",
+                save_as: "/explorer.save_as",
+                row_actions: "/explorer.row_actions",
+                toggle_select: "/explorer.toggle_select~",
+                change_dir: "/explorer.set_dir~",
+                click: "/explorer.click_item*",
+                action: "/explorer.doit*",
+                basket: "/explorer.basket",
+                shown: "show_explorer"
+            };
+        }
+        _init_data () {
+            var self = this;
+            var ret;
+            ret = {
+                actions: [ {
+                    name: "copy",
+                    label: "Copy"
+                }, {
+                    name: "cut",
+                    label: "Cut",
+                    disabled: true
+                }, {
+                    name: "paste",
+                    label: "Paste"
+                }, {
+                    name: "del",
+                    label: "Del"
+                } ]
+            };
+            return ret;
+        }
+        toggle_select (mut, rid) {
+            var self = this;
+            var r;
+            r = self.rows.find(function(it) {
+                return it.id === rid;
+            });
+            if (r[self.type_field] === "file") {
+                mut(rid);
+            }
+        }
+        selected_cnt (act) {
+            var self = this;
+            if (act === "del") {
+                return Object.keys(self.selected).length;
+            } else if (act === "paste") {
+                return self.basket.length - 1;
+            }
+        }
+        save_as (n, o) {
+            var self = this;
+            self.$refs.new.value = n && n.name;
+        }
+        rows_c () {
+            var ՐՏitr45, ՐՏidx45, ՐՏitr46, ՐՏidx46;
+            var self = this;
+            var type_icon, type_field, rows_sorted, sort_by, ret, row, rec, fld;
+            type_icon = {
+                file: {
+                    class: "fa fa-file-o",
+                    style: "color: gray"
+                },
+                dir: {
+                    class: "fa fa-folder",
+                    style: "color: gray"
+                }
+            };
+            type_field = self.type_field || "type";
+            rows_sorted = self.rows.slice(0);
+            sort_by = self.sort_by || self.fields[0].name;
+            rows_sorted.sort(function(a, b) {
+                var a_type, b_type, ret;
+                a_type = it_by_path(a, type_field);
+                b_type = it_by_path(b, type_field);
+                ret = a_type > b_type ? 1 : a_type < b_type ? -1 : 0;
+                if (!ret) {
+                    a = a[sort_by];
+                    b = b[sort_by];
+                    ret = a > b ? 1 : a < b ? -1 : 0;
+                }
+                return ret;
+            });
+            ret = [];
+            ՐՏitr45 = ՐՏ_Iterable(rows_sorted);
+            for (ՐՏidx45 = 0; ՐՏidx45 < ՐՏitr45.length; ՐՏidx45++) {
+                row = ՐՏitr45[ՐՏidx45];
+                rec = {
+                    id: row.id
+                };
+                ՐՏitr46 = ՐՏ_Iterable(self.fields);
+                for (ՐՏidx46 = 0; ՐՏidx46 < ՐՏitr46.length; ՐՏidx46++) {
+                    fld = ՐՏitr46[ՐՏidx46];
+                    rec[fld.name] = it_by_path(row, fld.name);
+                    if (fld.formatter) {
+                        rec[fld.name] = fld.formatter(rec[fld.name], row);
+                    }
+                }
+                rec._icon_ = type_icon[row[type_field]];
+                ret.push(rec);
+            }
+            return ret;
+        }
+        shown (n) {
+            var self = this;
+            if (n) {
+                self.listener.start();
+            } else {
+                self.listener.stop();
+            }
+        }
+        mounted () {
+            var self = this;
+            self.listener = blur_click_listener(self.$el, function() {
+                self.$emit("blur");
+            });
+        }
+        beforeDestroy () {
+            var self = this;
+            self.listener.stop();
+        }
+    }, (function(){
+        Object.defineProperties(ՐՏ_45.prototype, {
+            toggle_select: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_45.prototype.toggle_select)
+            },
+            selected_cnt: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_45.prototype.selected_cnt)
+            },
+            save_as: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.watch(ՐՏ_45.prototype.save_as)
+            },
+            rows_c: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.computed(ՐՏ_45.prototype.rows_c)
+            },
+            shown: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.watch(ՐՏ_45.prototype.shown)
+            }
+        });
+        ;
+    })(), ՐՏ_45);
+    function make() {
+        return new Folder_content();
+    }
+    if (__name__ === "__main__") {
+        main();
+    }
+    ՐՏ_modules["components.folder_content"]["templ_folder_content"] = templ_folder_content;
+
+    ՐՏ_modules["components.folder_content"]["vc"] = vc;
+
+    ՐՏ_modules["components.folder_content"]["it_by_path"] = it_by_path;
+
+    ՐՏ_modules["components.folder_content"]["Folder_content"] = Folder_content;
+
+    ՐՏ_modules["components.folder_content"]["make"] = make;
+})();
+
+(function(){
+    var __name__ = "components.editor";
+    var templ_editor, vc;
+    templ_editor = "\n<div>\n    <ul  class = 'doc_tabs'>\n        <li  v-for = 'doc, doc_k in doc_infos' :key = 'doc_k' :class = \"{active: doc_num == doc_k}\">\n            <span  @click = '(swap_doc(doc_k), edit_focus())'>\n                {{doc.name}}\n            </span>\n            <i  class = 'fa fa-close' @click = 'close(doc_k)' :style = '{color: doc.is_saved ? null : \"red\"}' :title = 'doc.is_saved ? null : \"not saved\"'></i>\n        </li>\n    </ul>\n    <div  v-if = '!doc_num' class = 'editor_welcome'>\n        <div>\n            <h2  style = 'background-color: white'>\n                <span  style = 'color: #42b983;'>Vue</span>\n                <span  class = 'v2p_char' style = 'color: black;'>{{w23p_ver}}</span>\n                <span  class = 'v2p_char' style = 'color: #006ea5;'>p</span>\n                <span  class = 'v2p_char' style = 'color: #bfa03b;'>y</span>\n                <i  class = 'v2p_char' style = 'color: #b00;'>j</i>\n            </h2>\n        </div>\n    </div>\n    <div  v-show = 'doc_num' class = 'editor_up_bar'>\n        <div  class = 'left'>\n            <span  class = 'doc_title'>{{doc_num && doc_info.name || \"\"}}</span>\n            <span>ln: {{cursor.line+1}} col: {{cursor.ch}}</span>\n        </div>\n        <div  class = 'right'>\n            <span>{{doc_path}}</span>\n        </div>\n    </div>\n    <div  v-show = 'doc_num' style = 'position:fixed; left:0; top:140px; bottom:0px; width:100%;'>\n        <div  style = 'position: absolute; top:0px; bottom:50px; width:100%; padding: 0 10px;'>\n            <div  ref = 'cm_el' style = 'height:100%;'></div>\n        </div>\n        <div  style = 'position:fixed; bottom:0px; height:45px;'>\n            <div  v-if = 'error' @click = 'go_error' style = 'cursor:pointer;'>\n                <div>\n                    File: {{error.filename}}\n                </div>\n                <template  v-if = 'error.readfile_error'>\n                    {{error.message}} {{error.readfile_error.line}}:{{error.readfile_error.col}}\n                </template>\n                <template  v-else>\n                    {{error.message}} {{error.line}}:{{error.col}}\n                </template>\n                <div>{{error.stack}}</div>\n            </div>\n            <div  v-else>ok</div>\n        </div>\n    </div>\n</div>\n";
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
+    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
+    
+    vc = new V_collector();
+    var Editor = (ՐՏ_46 = class Editor extends RS_vue {
+        constructor () {
+            super(vc);
+            var self = this;
+            self.template = templ_editor;
+            self.map_store = {
+                get_fs: "get_fs",
+                windows: "/editor.windows",
+                doc_infos: "/editor.doc_infos",
+                set_active_window: "/editor.set_active_window~",
+                mount_cm: "/editor.mount_cm*",
+                swap_doc: "/editor.swap_doc*",
+                close: "/editor.close*",
+                web23py: "web23py"
+            };
+        }
+        _init_data () {
+            var self = this;
+            var ret;
+            ret = {
+                cursor: {
+                    line: 0,
+                    ch: 0
+                },
+                error: null
+            };
+            return ret;
+        }
+        w23p_ver () {
+            var self = this;
+            return /^.+(\d)/.exec(self.web23py)[1];
+        }
+        doc_num () {
+            var self = this;
+            return self.windows.w0 && self.windows.w0.doc_num;
+        }
+        doc_info () {
+            var self = this;
+            return self.doc_num && self.doc_infos[self.doc_num];
+        }
+        doc_path () {
+            var self = this;
+            var fs;
+            if (!self.doc_info) {
+                return;
+            }
+            fs = self.get_fs();
+            return fs.path_by_id(self.doc_info.id).path;
+        }
+        mounted () {
+            var self = this;
+            function clean_up(cm) {
+                self.cm = cm;
+                self.set_active_window("w0");
+                self.$refs.cm_el.children[0].style.lineHeight = "1.5";
+                cm.on("cursorActivity", function() {
+                    self.cursor_move();
+                });
+                cm.setSize("100%", "100%");
+            }
+            self.mount_cm(self.$refs.cm_el, "w0").then(clean_up);
+        }
+        edit_focus () {
+            var self = this;
+            self.$nextTick(function() {
+                self.cm && self.cm.focus();
+            });
+        }
+        cursor_move () {
+            var self = this;
+            self.cursor = self.cm.getCursor();
+        }
+        doc_num_watch (to_doc, cur_doc) {
+            var self = this;
+            self.$nextTick(function() {
+                self.cm.refresh();
+                self.cursor_move();
+                self.edit_focus();
+            });
+        }
+        go_error () {
+            var ՐՏ_47, ՐՏ_48;
+            var self = this;
+            var err;
+            err = self.error.readfile_error || self.error;
+            if (!err || ((ՐՏ_47 = err.line) === (ՐՏ_48 = void 0) || typeof ՐՏ_47 === "object" && ՐՏ_eq(ՐՏ_47, ՐՏ_48))) {
+                return;
+            }
+            self.cm.focus();
+            self.cm.doc.setCursor(err.line - 1, err.col);
+        }
+    }, (function(){
+        Object.defineProperties(ՐՏ_46.prototype, {
+            w23p_ver: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.computed(ՐՏ_46.prototype.w23p_ver)
+            },
+            doc_num: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.computed(ՐՏ_46.prototype.doc_num)
+            },
+            doc_info: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.computed(ՐՏ_46.prototype.doc_info)
+            },
+            doc_path: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.computed(ՐՏ_46.prototype.doc_path)
+            },
+            edit_focus: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_46.prototype.edit_focus)
+            },
+            cursor_move: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_46.prototype.cursor_move)
+            },
+            doc_num_watch: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.watch("doc_num")(ՐՏ_46.prototype.doc_num_watch)
+            },
+            go_error: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_46.prototype.go_error)
+            }
+        });
+        ;
+    })(), ՐՏ_46);
+    function make() {
+        return new Editor();
+    }
+    function main() {
+    }
+    if (__name__ === "__main__") {
+        main();
+    }
+    ՐՏ_modules["components.editor"]["templ_editor"] = templ_editor;
+
+    ՐՏ_modules["components.editor"]["vc"] = vc;
+
+    ՐՏ_modules["components.editor"]["Editor"] = Editor;
+
+    ՐՏ_modules["components.editor"]["make"] = make;
+
+    ՐՏ_modules["components.editor"]["main"] = main;
+})();
+
+(function(){
+    var __name__ = "components.menu";
+    var templ_menu, vc;
+    templ_menu = "\n<div>\n    <ul  v-for = \"side in ['left', 'right']\" class = \"menu\" :class = '{right: side == \"right\"}'>\n        <li  v-for = 'item in menus[side]' :class = '{disabled: is_disabled(item) }'>\n            <template  v-if = 'item.href != undefined'>\n                <a  class = \"black\" :href = \"mount_prop(item.href)\" @click = 'click(item, $event)' v-bind = \"item.attrs\">\n                    <strong  v-html = 'mount_prop(item.label)'/>\n                </a>\n            </template>\n            <template  v-else-if = 'item.subitems'>\n                <a  class = \"black\" v-html = 'mount_prop(item.label)'></a>\n                <ul><li  v-for = 'subitem in item.subitems' :class = '{disabled: is_disabled(subitem) }'>\n                    <a  :href = \"mount_prop(subitem.href)\" @click = 'click(subitem, $event)' v-html = 'mount_prop(subitem.label)' v-bind = \"subitem.attrs\"></a>\n                </li></ul>\n            </template>\n            <template  v-else>\n                <slot  v-if = 'item.slot' :slot_name = 'item.slot'></slot>\n            </template>\n        </li>\n    </ul>\n</div>\n";
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
+    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
+    
+    var SF = ՐՏ_modules["asset.common"].SF;
+    
+    vc = new V_collector();
+    var Menu = (ՐՏ_49 = class Menu extends RS_vue {
+        constructor () {
+            super(vc);
+            var self = this;
+            self.map_store = {
+                w23p_app: "w23p_app"
+            };
+            self.template = templ_menu;
+            self.props = {
+                menus: Object
+            };
+        }
+        _init_data () {
+            var self = this;
+            var ret;
+            ret = {};
+            return ret;
+        }
+        mount_prop (label) {
+            var self = this;
+            return SF(label, self);
+        }
+        click (item, e) {
+            var self = this;
+            if (item.href && item.href.startsWith("#cmd:")) {
+                e.preventDefault();
+            }
+            setTimeout(function() {
+                self.$emit("click_item", item, e);
+            }, 0);
+        }
+        is_disabled (it) {
+            var self = this;
+            return false;
+        }
+    }, (function(){
+        Object.defineProperties(ՐՏ_49.prototype, {
+            mount_prop: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_49.prototype.mount_prop)
+            },
+            click: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_49.prototype.click)
+            },
+            is_disabled: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_49.prototype.is_disabled)
+            }
+        });
+        ;
+    })(), ՐՏ_49);
+    function make() {
+        return new Menu();
+    }
+    if (__name__ === "__main__") {
+        main();
+    }
+    ՐՏ_modules["components.menu"]["templ_menu"] = templ_menu;
+
+    ՐՏ_modules["components.menu"]["vc"] = vc;
+
+    ՐՏ_modules["components.menu"]["Menu"] = Menu;
+
+    ՐՏ_modules["components.menu"]["make"] = make;
+})();
+
+(function(){
+    var __name__ = "components.flash";
+    var templ_flash, vc;
+    templ_flash = "\n<div  id = 'flash' :class = 'cls'>\n    <template  v-if = 'component'>\n        <component  :is = 'component' v-bind = 'cargs'></component>\n    </template>\n    <template  v-else>\n        {{msg}}\n    </template>\n</div>\n";
+    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
+    
+    vc = new V_collector();
+    var Flash = (ՐՏ_50 = class Flash extends RS_vue {
+        constructor () {
+            super(vc);
+            var self = this;
+            self.template = templ_flash;
+            self.map_store = {
+                bus: "$bus",
+                msg: "flash.msg",
+                component: "flash.component",
+                cargs: "flash.cargs",
+                status: "flash.status"
+            };
+        }
+        _init_data () {
+            var self = this;
+            var ret;
+            self.hider = null;
+            ret = {
+                cls: ""
+            };
+            return ret;
+        }
+        mounted () {
+            var self = this;
+            self.bus.$on("flash", function() {
+                self.show();
+            });
+        }
+        show () {
+            var self = this;
+            var t;
+            if (self.show.hider) {
+                clearTimeout(self.show.hider);
+                self.hide();
+                self.$nextTick(function() {
+                    self.show();
+                });
+                return;
+            }
+            self.cls = "show " + (self.status || "");
+            t = 1e3;
+            if (self.msg) {
+                t = self.msg.split(/\W+/).length * 900;
+                if (t > 4e3) {
+                    t = 4e3;
+                }
+            }
+            self.hider = setTimeout(self.hide, t);
+        }
+        hide () {
+            var self = this;
+            self.cls = "hide " + (self.status || "");
+            self.hider = null;
+        }
+    }, (function(){
+        Object.defineProperties(ՐՏ_50.prototype, {
+            show: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_50.prototype.show)
+            },
+            hide: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_50.prototype.hide)
+            }
+        });
+        ;
+    })(), ՐՏ_50);
+    function make() {
+        return new Flash();
+    }
+    if (__name__ === "__main__") {
+        main();
+    }
+    ՐՏ_modules["components.flash"]["templ_flash"] = templ_flash;
+
+    ՐՏ_modules["components.flash"]["vc"] = vc;
+
+    ՐՏ_modules["components.flash"]["Flash"] = Flash;
+
+    ՐՏ_modules["components.flash"]["make"] = make;
+})();
+
+(function(){
+    var __name__ = "components.base_layout";
+    var templ, vc;
+    templ = "\n<div>\n    <div  v-if = 'is_busy' class = 'busy' style = 'position: fixed; top:0; left:0; right:0; bottom: 0; z-index:9999'></div>\n    <header  class = \"black padded lifted fill\" style = 'position:fixed; z-index:1000; top:0'>\n        <modal></modal>\n        <div  class = \"container\" id = 'top_menu'>\n            <top_menu  class = \"fill middle\" :menus = 'menus' @click_item = 'menu_click.apply(this, arguments)'>\n                <template  slot-scope = 'props'>\n                    <template  v-if = \"props.slot_name == 'search'\">\n                        <div  style = 'display:inline-block; margin-right: 5px'>\n                            <input  class = \"l_rounded barinput\" placeholder = \"Not implemented\" style = 'width:initial'/>\n                            <div  class = 'btn barinput gray r_rounded' style = 'float:right;'>\n                                <i  class = 'fa fa-search' style = 'line-height:1.5'></i>\n                            </div>\n                        </div>\n                    </template>\n                    <template  v-else-if = \"props.slot_name == 'flash'\">\n                        <div  style = 'position:relative;'>\n                            <a  class = 'black'>\n                                <i  class = 'fa fa-bullhorn fa-flip-horizontal'></i>\n                            </a>\n                            <flash  ref = 'flash' class = 'flash' style = 'z-index:10000;'></flash>\n                        </div>\n                        <ul>\n                            <li>\n                                <a  class = 'hidden'></a>\n                                <div  class = 'flash' :class = 'flash.status'>\n                                    <template  v-if = 'flash.component'>\n                                        <component  :is = 'flash.component' v-bind = 'flash.cargs'></component>\n                                    </template>\n                                    <template  v-else>\n                                        {{flash.msg}}\n                                    </template>\n                                </div>\n                            </li>\n                        </ul>\n                    </template>\n                </template>\n            </top_menu>\n        </div>\n    </header>\n    <main>\n        <div  class = 'main' style = 'margin-top: 50px; min-height:90vh;'>\n            <slot></slot>\n        </div>\n        <div  v-html = '\"&nbsp;\"'></div>\n    </main>\n</div>\n";
+    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
+    
+    var menu = ՐՏ_modules["components.menu"];
+    
+    var flash = ՐՏ_modules["components.flash"];
+    
+    function get_app_opt() {
+        var ret;
+        ret = {};
+        ret.routes = {
+            view: "grid_doc",
+            "new": "span",
+            login: "login"
+        };
+        return ret;
+    }
+    vc = new V_collector();
+    class Layout extends RS_vue {
+        constructor () {
+            super(vc);
+            var self = this;
+            self.template = templ;
+            self.components = {
+                "top_menu": menu.make(),
+                "flash": flash.make()
+            };
+            self.map_store = {
+                flash: "flash",
+                is_busy: "is_busy",
+                menus: "menus",
+                menu_click: "menu_click*"
+            };
+        }
+        _init_data () {
+            var self = this;
+            var app_opt, ret;
+            app_opt = get_app_opt();
+            ret = {
+                routes: app_opt.routes
+            };
+            return ret;
+        }
+    }
+    function make() {
+        return new Layout();
+    }
+    ՐՏ_modules["components.base_layout"]["templ"] = templ;
+
+    ՐՏ_modules["components.base_layout"]["vc"] = vc;
+
+    ՐՏ_modules["components.base_layout"]["get_app_opt"] = get_app_opt;
+
+    ՐՏ_modules["components.base_layout"]["Layout"] = Layout;
+
+    ՐՏ_modules["components.base_layout"]["make"] = make;
+})();
+
+(function(){
+    var __name__ = "components.modal";
+    var templ, vc;
+    templ = "\n<div  class = 'modal-container' v-if = 'modal_state.is_active'>\n    <component  :is = 'modal_state.inner_component' v-bind = 'modal_state.inner_args' @close = 'close_modal'></component>\n</div>\n";
+    var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
+    var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
+    
+    vc = new V_collector();
+    class Modal extends RS_vue {
+        constructor () {
+            super(vc);
+            var self = this;
+            self.template = templ;
+            self.map_store = {
+                modal_state: "modal_state",
+                close_modal: "close_modal*"
+            };
+        }
+        _init_data () {
+            var self = this;
+            var ret;
+            ret = {};
+            return ret;
+        }
+    }
+    function make() {
+        return new Modal();
+    }
+    function main() {
+    }
+    if (__name__ === "__main__") {
+        main();
+    }
+    ՐՏ_modules["components.modal"]["templ"] = templ;
+
+    ՐՏ_modules["components.modal"]["vc"] = vc;
+
+    ՐՏ_modules["components.modal"]["Modal"] = Modal;
+
+    ՐՏ_modules["components.modal"]["make"] = make;
+
+    ՐՏ_modules["components.modal"]["main"] = main;
+})();
+
+(function(){
+    var __name__ = "components";
+
+    ՐՏ_modules["components"]["confirm"] = ՐՏ_modules["components.confirm"];
+
+    ՐՏ_modules["components"]["error"] = ՐՏ_modules["components.error"];
+
+    ՐՏ_modules["components"]["app_selector"] = ՐՏ_modules["components.app_selector"];
+
+    ՐՏ_modules["components"]["vform"] = ՐՏ_modules["components.vform"];
+
+    ՐՏ_modules["components"]["login"] = ՐՏ_modules["components.login"];
+
+    ՐՏ_modules["components"]["folder_content"] = ՐՏ_modules["components.folder_content"];
+
+    ՐՏ_modules["components"]["editor"] = ՐՏ_modules["components.editor"];
+
+    ՐՏ_modules["components"]["menu"] = ՐՏ_modules["components.menu"];
+
+    ՐՏ_modules["components"]["flash"] = ՐՏ_modules["components.flash"];
+
+    ՐՏ_modules["components"]["base_layout"] = ՐՏ_modules["components.base_layout"];
+
+    ՐՏ_modules["components"]["modal"] = ՐՏ_modules["components.modal"];
+})();
+
+(function(){
     var __name__ = "store.editor";
     var EDITOR_DEFSTATE, vc;
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
@@ -4974,7 +5221,7 @@ var ՐՏ_modules = {};
         windows: {}
     };
     vc = new V_collector();
-    var State = (ՐՏ_49 = class State extends RS_state_api {
+    var State = (ՐՏ_51 = class State extends RS_state_api {
         constructor (vue, state) {
             super(vc, vue, state || EDITOR_DEFSTATE);
             var self = this;
@@ -5041,71 +5288,71 @@ var ՐՏ_modules = {};
             return aw && aw.doc_num;
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_49.prototype, {
+        Object.defineProperties(ՐՏ_51.prototype, {
             add_window: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_49.prototype.add_window)
+                value: vc.mutation(ՐՏ_51.prototype.add_window)
             },
             set_active_window: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_49.prototype.set_active_window)
+                value: vc.mutation(ՐՏ_51.prototype.set_active_window)
             },
             open: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_49.prototype.open)
+                value: vc.mutation(ՐՏ_51.prototype.open)
             },
             set_doc_info: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_49.prototype.set_doc_info)
+                value: vc.mutation(ՐՏ_51.prototype.set_doc_info)
             },
             set_doc_change_gen: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_49.prototype.set_doc_change_gen)
+                value: vc.mutation(ՐՏ_51.prototype.set_doc_change_gen)
             },
             toggle_doc_saved: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_49.prototype.toggle_doc_saved)
+                value: vc.mutation(ՐՏ_51.prototype.toggle_doc_saved)
             },
             close: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_49.prototype.close)
+                value: vc.mutation(ՐՏ_51.prototype.close)
             },
             swap_doc: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_49.prototype.swap_doc)
+                value: vc.mutation(ՐՏ_51.prototype.swap_doc)
             },
             toggle_vim: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_49.prototype.toggle_vim)
+                value: vc.mutation(ՐՏ_51.prototype.toggle_vim)
             },
             set_error: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_49.prototype.set_error)
+                value: vc.mutation(ՐՏ_51.prototype.set_error)
             },
             clear_error: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_49.prototype.clear_error)
+                value: vc.mutation(ՐՏ_51.prototype.clear_error)
             },
             active_doc_num: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.getter(ՐՏ_49.prototype.active_doc_num)
+                value: vc.getter(ՐՏ_51.prototype.active_doc_num)
             }
         });
         ;
-    })(), ՐՏ_49);
-    var Store = (ՐՏ_50 = class Store extends RS_store {
+    })(), ՐՏ_51);
+    var Store = (ՐՏ_52 = class Store extends RS_store {
         constructor (root) {
             super();
             var self = this;
@@ -5196,12 +5443,12 @@ var ՐՏ_modules = {};
             self.commit("toggle_doc_saved", doc_num, true);
         }
         *save_all () {
-            var ՐՏitr48, ՐՏidx48;
+            var ՐՏitr47, ՐՏidx47;
             var self = this;
             var k;
-            ՐՏitr48 = ՐՏ_Iterable(self.get("doc_infos"));
-            for (ՐՏidx48 = 0; ՐՏidx48 < ՐՏitr48.length; ՐՏidx48++) {
-                k = ՐՏitr48[ՐՏidx48];
+            ՐՏitr47 = ՐՏ_Iterable(self.get("doc_infos"));
+            for (ՐՏidx47 = 0; ՐՏidx47 < ՐՏitr47.length; ՐՏidx47++) {
+                k = ՐՏitr47[ՐՏidx47];
                 yield self.dispatch("save", k);
             }
         }
@@ -5252,6 +5499,9 @@ var ՐՏ_modules = {};
             defkeys["Alt-V"] = function(cm) {
                 self.dispatch("toggle_vim");
             };
+            CM.commands.save = function(cm) {
+                self.$emit("save", cm);
+            };
             cm_rapydscript.reg_mode(CM);
             cm_vuepy.reg_mode(CM);
         }
@@ -5274,17 +5524,22 @@ var ՐՏ_modules = {};
             return cm;
         }
         *close_all () {
-            var ՐՏitr49, ՐՏidx49;
+            var ՐՏitr48, ՐՏidx48;
             var self = this;
-            var k;
-            ՐՏitr49 = ՐՏ_Iterable(self.get("doc_infos"));
-            for (ՐՏidx49 = 0; ՐՏidx49 < ՐՏitr49.length; ՐՏidx49++) {
-                k = ՐՏitr49[ՐՏidx49];
-                yield self.dispatch("close", k);
+            var all_closed, k, maybe_canceled;
+            all_closed = true;
+            ՐՏitr48 = ՐՏ_Iterable(self.get("doc_infos"));
+            for (ՐՏidx48 = 0; ՐՏidx48 < ՐՏitr48.length; ՐՏidx48++) {
+                k = ՐՏitr48[ՐՏidx48];
+                maybe_canceled = yield self.dispatch("close", k);
+                if (maybe_canceled === "cancel") {
+                    all_closed = false;
+                }
             }
+            return all_closed;
         }
         *close (doc_num) {
-            var ՐՏitr50, ՐՏidx50;
+            var ՐՏitr49, ՐՏidx49;
             var self = this;
             var doc_info, ok_cancel, aw, cur_doc_num, isfound, next_doc_k, prev_doc_k, _prev_doc_k, doc_k;
             doc_info = self.get("doc_infos")[doc_num];
@@ -5293,7 +5548,7 @@ var ՐՏ_modules = {};
                     message: doc_info.name + " is not saved! Do you want to continue?"
                 });
                 if (ok_cancel === "cancel") {
-                    return;
+                    return "cancel";
                 }
             }
             aw = self.get("active_window");
@@ -5307,9 +5562,9 @@ var ՐՏ_modules = {};
             next_doc_k = null;
             prev_doc_k = null;
             _prev_doc_k = null;
-            ՐՏitr50 = ՐՏ_Iterable(self.cm_docs);
-            for (ՐՏidx50 = 0; ՐՏidx50 < ՐՏitr50.length; ՐՏidx50++) {
-                doc_k = ՐՏitr50[ՐՏidx50];
+            ՐՏitr49 = ՐՏ_Iterable(self.cm_docs);
+            for (ՐՏidx49 = 0; ՐՏidx49 < ՐՏitr49.length; ՐՏidx49++) {
+                doc_k = ՐՏitr49[ՐՏidx49];
                 if (isfound) {
                     next_doc_k = doc_k;
                     break;
@@ -5332,7 +5587,7 @@ var ՐՏ_modules = {};
             return self.dispatch("open_by_id", fid, win_id);
         }
         open_by_id (fid, win_id, as_doc_num) {
-            var ՐՏ_51;
+            var ՐՏ_53;
             var self = this;
             var fs, info, content, doc_num;
             fs = self.root.api.fs;
@@ -5362,7 +5617,7 @@ var ՐՏ_modules = {};
                     create_cm_doc(doc_num, content, self.map_ftype(info.name));
                 }
             }
-            if (win_id && (as_doc_num || ((ՐՏ_51 = self.get("windows")[win_id].doc_num) !== doc_num && (typeof ՐՏ_51 !== "object" || !ՐՏ_eq(ՐՏ_51, doc_num))))) {
+            if (win_id && (as_doc_num || ((ՐՏ_53 = self.get("windows")[win_id].doc_num) !== doc_num && (typeof ՐՏ_53 !== "object" || !ՐՏ_eq(ՐՏ_53, doc_num))))) {
                 self.cm_windows[win_id].swapDoc(self.cm_docs[doc_num]);
                 self.cm_windows[win_id].focus();
                 self.commit("swap_doc", doc_num, win_id);
@@ -5370,10 +5625,10 @@ var ՐՏ_modules = {};
             return doc_num;
         }
         swap_doc (doc_num, win_id) {
-            var ՐՏ_52;
+            var ՐՏ_54;
             var self = this;
             win_id = win_id || self.get("active_window");
-            if (((ՐՏ_52 = self.get("windows")[win_id].doc_num) !== doc_num && (typeof ՐՏ_52 !== "object" || !ՐՏ_eq(ՐՏ_52, doc_num)))) {
+            if (((ՐՏ_54 = self.get("windows")[win_id].doc_num) !== doc_num && (typeof ՐՏ_54 !== "object" || !ՐՏ_eq(ՐՏ_54, doc_num)))) {
                 if (doc_num) {
                     self.cm_windows[win_id].swapDoc(self.cm_docs[doc_num]);
                     self.cm_windows[win_id].focus();
@@ -5383,14 +5638,14 @@ var ՐՏ_modules = {};
             return doc_num;
         }
         toggle_vim (onoff) {
-            var ՐՏitr51, ՐՏidx51;
+            var ՐՏitr50, ՐՏidx50;
             var self = this;
             var mode, k;
             onoff = self.commit("toggle_vim", onoff);
             mode = onoff ? "vim" : "default";
-            ՐՏitr51 = ՐՏ_Iterable(self.cm_windows);
-            for (ՐՏidx51 = 0; ՐՏidx51 < ՐՏitr51.length; ՐՏidx51++) {
-                k = ՐՏitr51[ՐՏidx51];
+            ՐՏitr50 = ՐՏ_Iterable(self.cm_windows);
+            for (ՐՏidx50 = 0; ՐՏidx50 < ՐՏitr50.length; ՐՏidx50++) {
+                k = ՐՏitr50[ՐՏidx50];
                 self.cm_windows[k].setOption("keyMap", mode);
             }
         }
@@ -5444,29 +5699,29 @@ var ՐՏ_modules = {};
             return map_type[ext];
         }
         doc_num_by_fid (file_id) {
-            var ՐՏitr52, ՐՏidx52, ՐՏ_53;
+            var ՐՏitr51, ՐՏidx51, ՐՏ_55;
             var self = this;
             var docs, doc_num;
             if (!file_id) {
                 return false;
             }
             docs = self.get("doc_infos");
-            ՐՏitr52 = ՐՏ_Iterable(docs);
-            for (ՐՏidx52 = 0; ՐՏidx52 < ՐՏitr52.length; ՐՏidx52++) {
-                doc_num = ՐՏitr52[ՐՏidx52];
-                if (((ՐՏ_53 = docs[doc_num].id) === file_id || typeof ՐՏ_53 === "object" && ՐՏ_eq(ՐՏ_53, file_id))) {
+            ՐՏitr51 = ՐՏ_Iterable(docs);
+            for (ՐՏidx51 = 0; ՐՏidx51 < ՐՏitr51.length; ՐՏidx51++) {
+                doc_num = ՐՏitr51[ՐՏidx51];
+                if (((ՐՏ_55 = docs[doc_num].id) === file_id || typeof ՐՏ_55 === "object" && ՐՏ_eq(ՐՏ_55, file_id))) {
                     return doc_num;
                 }
             }
             return false;
         }
         doc_num_by_cm_doc (cm_doc) {
-            var ՐՏitr53, ՐՏidx53;
+            var ՐՏitr52, ՐՏidx52;
             var self = this;
             var doc_num;
-            ՐՏitr53 = ՐՏ_Iterable(self.cm_docs);
-            for (ՐՏidx53 = 0; ՐՏidx53 < ՐՏitr53.length; ՐՏidx53++) {
-                doc_num = ՐՏitr53[ՐՏidx53];
+            ՐՏitr52 = ՐՏ_Iterable(self.cm_docs);
+            for (ՐՏidx52 = 0; ՐՏidx52 < ՐՏitr52.length; ՐՏidx52++) {
+                doc_num = ՐՏitr52[ՐՏidx52];
                 if (self.cm_docs[doc_num] === cm_doc) {
                     return doc_num;
                 }
@@ -5474,75 +5729,75 @@ var ՐՏ_modules = {};
             return false;
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_50.prototype, {
+        Object.defineProperties(ՐՏ_52.prototype, {
             trim_space: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_50.prototype.trim_space)
+                value: vc.action(ՐՏ_52.prototype.trim_space)
             },
             reload: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_50.prototype.reload)
+                value: vc.action(ՐՏ_52.prototype.reload)
             },
             save_all: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_50.prototype.save_all))
+                value: vc.action(asyncer(ՐՏ_52.prototype.save_all))
             },
             save: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_50.prototype.save)
+                value: vc.action(ՐՏ_52.prototype.save)
             },
             mount_cm: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_50.prototype.mount_cm)
+                value: vc.action(ՐՏ_52.prototype.mount_cm)
             },
             close_all: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_50.prototype.close_all))
+                value: vc.action(asyncer(ՐՏ_52.prototype.close_all))
             },
             close: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_50.prototype.close))
+                value: vc.action(asyncer(ՐՏ_52.prototype.close))
             },
             open: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_50.prototype.open)
+                value: vc.action(ՐՏ_52.prototype.open)
             },
             open_by_id: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_50.prototype.open_by_id)
+                value: vc.action(ՐՏ_52.prototype.open_by_id)
             },
             swap_doc: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_50.prototype.swap_doc)
+                value: vc.action(ՐՏ_52.prototype.swap_doc)
             },
             toggle_vim: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_50.prototype.toggle_vim)
+                value: vc.action(ՐՏ_52.prototype.toggle_vim)
             },
             set_cursor: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_50.prototype.set_cursor)
+                value: vc.action(ՐՏ_52.prototype.set_cursor)
             },
             compile_active_doc: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_50.prototype.compile_active_doc)
+                value: vc.action(ՐՏ_52.prototype.compile_active_doc)
             }
         });
         ;
-    })(), ՐՏ_50);
+    })(), ՐՏ_52);
     if (__name__ === "__main__") {
     }
     ՐՏ_modules["store.editor"]["EDITOR_DEFSTATE"] = EDITOR_DEFSTATE;
@@ -5593,7 +5848,7 @@ var ՐՏ_modules = {};
         basket: []
     };
     vc = new V_collector();
-    var State = (ՐՏ_54 = class State extends RS_state_api {
+    var State = (ՐՏ_56 = class State extends RS_state_api {
         constructor (vue, getter_factory, state) {
             super(vc, vue, state || DEFSTATE);
             var self = this;
@@ -5636,7 +5891,7 @@ var ՐՏ_modules = {};
             self.state.selected = {};
         }
         fix_basket () {
-            var ՐՏ_55, ՐՏ_56;
+            var ՐՏ_57, ՐՏ_58;
             var self = this;
             var fs, basket, b;
             fs = self.vm.rs_imports.get_fs()();
@@ -5644,7 +5899,7 @@ var ՐՏ_modules = {};
             b = basket.slice(1).filter(function(it) {
                 return fs.files[it] || fs.dirs[it];
             });
-            if (((ՐՏ_55 = b.length) !== (ՐՏ_56 = basket.length - 1) && (typeof ՐՏ_55 !== "object" || !ՐՏ_eq(ՐՏ_55, ՐՏ_56)))) {
+            if (((ՐՏ_57 = b.length) !== (ՐՏ_58 = basket.length - 1) && (typeof ՐՏ_57 !== "object" || !ՐՏ_eq(ՐՏ_57, ՐՏ_58)))) {
                 b.unshift(basket[0]);
                 self.commit("set_basket", b);
             }
@@ -5653,24 +5908,24 @@ var ՐՏ_modules = {};
             var vm = this;
             var it;
             return (function() {
-                var ՐՏidx54, ՐՏitr54 = ՐՏ_Iterable(vm.path_arr), ՐՏres = [], it;
-                for (ՐՏidx54 = 0; ՐՏidx54 < ՐՏitr54.length; ՐՏidx54++) {
-                    it = ՐՏitr54[ՐՏidx54];
+                var ՐՏidx53, ՐՏitr53 = ՐՏ_Iterable(vm.path_arr), ՐՏres = [], it;
+                for (ՐՏidx53 = 0; ՐՏidx53 < ՐՏitr53.length; ՐՏidx53++) {
+                    it = ՐՏitr53[ՐՏidx53];
                     ՐՏres.push(it.name);
                 }
                 return ՐՏres;
             })().join("/");
         }
         list_dir () {
-            var ՐՏitr55, ՐՏidx55;
+            var ՐՏitr54, ՐՏidx54;
             var vm = this;
             var fs, ret, ids, id;
             fs = vm.rs_imports.get_fs()();
             ret = [];
             ids = fs.list_dir(vm.state.dir_id);
-            ՐՏitr55 = ՐՏ_Iterable(ids);
-            for (ՐՏidx55 = 0; ՐՏidx55 < ՐՏitr55.length; ՐՏidx55++) {
-                id = ՐՏitr55[ՐՏidx55];
+            ՐՏitr54 = ՐՏ_Iterable(ids);
+            for (ՐՏidx54 = 0; ՐՏidx54 < ՐՏitr54.length; ՐՏidx54++) {
+                id = ՐՏitr54[ՐՏidx54];
                 ret.push(fs.get_info(id));
             }
             return ret;
@@ -5688,76 +5943,67 @@ var ՐՏ_modules = {};
                             style: "color: gray"
                         }
                     });
-                    if (r.name.endsWith(".html")) {
-                        ret.push({
-                            name: "try_html",
-                            icon: {
-                                class: "fa fa-play",
-                                style: "color: red; margin-left:5px;"
-                            }
-                        });
-                    }
                 }
                 return ret;
             }
             return inner;
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_54.prototype, {
+        Object.defineProperties(ՐՏ_56.prototype, {
             save_as: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_54.prototype.save_as)
+                value: vc.mutation(ՐՏ_56.prototype.save_as)
             },
             set_basket: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_54.prototype.set_basket)
+                value: vc.mutation(ՐՏ_56.prototype.set_basket)
             },
             set_dir: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_54.prototype.set_dir)
+                value: vc.mutation(ՐՏ_56.prototype.set_dir)
             },
             path_arr: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.getter(ՐՏ_54.prototype.path_arr)
+                value: vc.getter(ՐՏ_56.prototype.path_arr)
             },
             toggle_select: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_54.prototype.toggle_select)
+                value: vc.mutation(ՐՏ_56.prototype.toggle_select)
             },
             clear_selected: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_54.prototype.clear_selected)
+                value: vc.mutation(ՐՏ_56.prototype.clear_selected)
             },
             fix_basket: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_54.prototype.fix_basket)
+                value: vc.mutation(ՐՏ_56.prototype.fix_basket)
             },
             path: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.getter(ՐՏ_54.prototype.path)
+                value: vc.getter(ՐՏ_56.prototype.path)
             },
             list_dir: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.getter(ՐՏ_54.prototype.list_dir)
+                value: vc.getter(ՐՏ_56.prototype.list_dir)
             },
             row_actions: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.getter(ՐՏ_54.prototype.row_actions)
+                value: vc.getter(ՐՏ_56.prototype.row_actions)
             }
         });
         ;
-    })(), ՐՏ_54);
-    var Store = (ՐՏ_57 = class Store extends RS_store {
+    })(), ՐՏ_56);
+    var Store = (ՐՏ_59 = class Store extends RS_store {
         constructor (root) {
             super();
             var self = this;
@@ -5781,7 +6027,7 @@ var ՐՏ_modules = {};
             }
         }
         doit (a, payload) {
-            var ՐՏitr57, ՐՏidx57, ՐՏitr58, ՐՏidx58, ՐՏitr59, ՐՏidx59, ՐՏitr60, ՐՏidx60;
+            var ՐՏitr56, ՐՏidx56, ՐՏitr57, ՐՏidx57, ՐՏitr58, ՐՏidx58, ՐՏitr59, ՐՏidx59;
             var self = this;
             var fs, cur_dir, selected, fl, fid, adoc, id, basket;
             fs = self.root.api.fs;
@@ -5794,11 +6040,11 @@ var ՐՏ_modules = {};
             } else if (a === "upload") {
                 ՐՏ_print("upload");
                 function save_files(files) {
-                    var ՐՏitr56, ՐՏidx56;
+                    var ՐՏitr55, ՐՏidx55;
                     var f, fid;
-                    ՐՏitr56 = ՐՏ_Iterable(files);
-                    for (ՐՏidx56 = 0; ՐՏidx56 < ՐՏitr56.length; ՐՏidx56++) {
-                        f = ՐՏitr56[ՐՏidx56];
+                    ՐՏitr55 = ՐՏ_Iterable(files);
+                    for (ՐՏidx55 = 0; ՐՏidx55 < ՐՏitr55.length; ՐՏidx55++) {
+                        f = ՐՏitr55[ՐՏidx55];
                         fid = fs.create_file(f.name, cur_dir);
                         fs.write_file(fid, f.value);
                     }
@@ -5823,9 +6069,9 @@ var ՐՏ_modules = {};
                 }
                 self.root.$emit("fs_changed");
             } else if (a === "del") {
-                ՐՏitr57 = ՐՏ_Iterable(selected);
-                for (ՐՏidx57 = 0; ՐՏidx57 < ՐՏitr57.length; ՐՏidx57++) {
-                    id = ՐՏitr57[ՐՏidx57];
+                ՐՏitr56 = ՐՏ_Iterable(selected);
+                for (ՐՏidx56 = 0; ՐՏidx56 < ՐՏitr56.length; ՐՏidx56++) {
+                    id = ՐՏitr56[ՐՏidx56];
                     if (selected[id]) {
                         fs.del_any(id);
                     }
@@ -5835,9 +6081,9 @@ var ՐՏ_modules = {};
                 self.root.$emit("fs_changed");
             } else if (ՐՏ_in(a, [ "cut", "copy" ])) {
                 basket = [ a ];
-                ՐՏitr58 = ՐՏ_Iterable(selected);
-                for (ՐՏidx58 = 0; ՐՏidx58 < ՐՏitr58.length; ՐՏidx58++) {
-                    id = ՐՏitr58[ՐՏidx58];
+                ՐՏitr57 = ՐՏ_Iterable(selected);
+                for (ՐՏidx57 = 0; ՐՏidx57 < ՐՏitr57.length; ՐՏidx57++) {
+                    id = ՐՏitr57[ՐՏidx57];
                     if (selected[id]) {
                         basket.push(id);
                     }
@@ -5846,15 +6092,15 @@ var ՐՏ_modules = {};
             } else if (a === "paste") {
                 basket = self.get("basket");
                 if (basket[0] === "copy") {
-                    ՐՏitr59 = ՐՏ_Iterable(basket.slice(1));
-                    for (ՐՏidx59 = 0; ՐՏidx59 < ՐՏitr59.length; ՐՏidx59++) {
-                        id = ՐՏitr59[ՐՏidx59];
+                    ՐՏitr58 = ՐՏ_Iterable(basket.slice(1));
+                    for (ՐՏidx58 = 0; ՐՏidx58 < ՐՏitr58.length; ՐՏidx58++) {
+                        id = ՐՏitr58[ՐՏidx58];
                         fs.copy_any(id, cur_dir);
                     }
                 } else if (basket[0] === "cut") {
-                    ՐՏitr60 = ՐՏ_Iterable(basket.slice(1));
-                    for (ՐՏidx60 = 0; ՐՏidx60 < ՐՏitr60.length; ՐՏidx60++) {
-                        id = ՐՏitr60[ՐՏidx60];
+                    ՐՏitr59 = ՐՏ_Iterable(basket.slice(1));
+                    for (ՐՏidx59 = 0; ՐՏidx59 < ՐՏitr59.length; ՐՏidx59++) {
+                        id = ՐՏitr59[ՐՏidx59];
                         fs.move(id, cur_dir);
                     }
                 }
@@ -5864,20 +6110,20 @@ var ՐՏ_modules = {};
             ՐՏ_print(a, payload);
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_57.prototype, {
+        Object.defineProperties(ՐՏ_59.prototype, {
             click_item: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_57.prototype.click_item)
+                value: vc.action(ՐՏ_59.prototype.click_item)
             },
             doit: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_57.prototype.doit)
+                value: vc.action(ՐՏ_59.prototype.doit)
             }
         });
         ;
-    })(), ՐՏ_57);
+    })(), ՐՏ_59);
     if (__name__ === "__main__") {
     }
     ՐՏ_modules["store.explorer"]["DEFSTATE"] = DEFSTATE;
@@ -5892,13 +6138,14 @@ var ՐՏ_modules = {};
 (function(){
     var __name__ = "server";
     class API {
-        constructor (axios, baseURL, bus) {
+        constructor (axios, baseURL, bus, login) {
             var self = this;
+            self.login = login;
             self.bus = bus;
             self.baseURL = baseURL;
             self.srv = axios.create({
                 baseURL: baseURL,
-                timeout: 1e4,
+                timeout: 6e4,
                 withCredentials: true
             });
             self.last_resp = "";
@@ -5910,7 +6157,8 @@ var ՐՏ_modules = {};
             args = args || [];
             if (meth === "get") {
                 if (Array.isArray(args)) {
-                    f = f + "/" + args.join("/");
+                    args.unshift(f);
+                    f = args.join("/");
                     args = void 0;
                     if (vars && !vars.params) {
                         vars = {
@@ -5923,11 +6171,15 @@ var ՐՏ_modules = {};
                     };
                 }
             }
-            ret = self.srv[meth](f, args);
-            ret.then(function(r) {
+            ret = self.srv[meth](f, args).then(function(r) {
                 self.done(r);
+                return r;
             }, function(r) {
-                self.raise_error(r);
+                return self.raise_error(r, {
+                    meth: meth,
+                    f: f,
+                    args: args
+                });
             });
             return ret;
         }
@@ -5950,8 +6202,13 @@ var ՐՏ_modules = {};
                 });
             }
         }
-        raise_error (err) {
+        raise_error (err, opt) {
             var self = this;
+            if (err.response.status === 403 && self.login) {
+                return self.login().then(function() {
+                    return self.srv[opt.meth](opt.f, opt.args);
+                });
+            }
             self.last_error = err;
             if (self.bus) {
                 self.bus.$emit("server", {
@@ -5960,6 +6217,7 @@ var ՐՏ_modules = {};
                     data: err
                 });
             }
+            return Promise.reject(err);
         }
     }
     ՐՏ_modules["server"]["API"] = API;
@@ -5970,9 +6228,9 @@ var ՐՏ_modules = {};
     function default_() {
         var user, ret;
         user = {
-            label: "Login",
-            href: "#login",
-            name: "login"
+            label: "Logout",
+            href: "#cmd:logout",
+            name: "logout"
         };
         ret = {
             left: [ {
@@ -6039,14 +6297,14 @@ var ՐՏ_modules = {};
         return ret;
     }
     function replace_by_name(items, name, obj) {
-        var ՐՏitr61, ՐՏidx61;
+        var ՐՏitr60, ՐՏidx60;
         var i, it, subs, ret;
         if (!name) {
             throw new Error("name required");
         }
-        ՐՏitr61 = ՐՏ_Iterable(enumerate(items));
-        for (ՐՏidx61 = 0; ՐՏidx61 < ՐՏitr61.length; ՐՏidx61++) {
-            [i, it] = ՐՏitr61[ՐՏidx61];
+        ՐՏitr60 = ՐՏ_Iterable(enumerate(items));
+        for (ՐՏidx60 = 0; ՐՏidx60 < ՐՏitr60.length; ՐՏidx60++) {
+            [i, it] = ՐՏitr60[ՐՏidx60];
             if (it.name === name) {
                 items[i] = obj;
                 return true;
@@ -6059,14 +6317,14 @@ var ՐՏ_modules = {};
         }
     }
     function menu_by_name(items, name) {
-        var ՐՏitr62, ՐՏidx62;
+        var ՐՏitr61, ՐՏidx61;
         var it, subs, ret;
         if (!name) {
             throw new Error("name required");
         }
-        ՐՏitr62 = ՐՏ_Iterable(items);
-        for (ՐՏidx62 = 0; ՐՏidx62 < ՐՏitr62.length; ՐՏidx62++) {
-            it = ՐՏitr62[ՐՏidx62];
+        ՐՏitr61 = ՐՏ_Iterable(items);
+        for (ՐՏidx61 = 0; ՐՏidx61 < ՐՏitr61.length; ՐՏidx61++) {
+            it = ՐՏitr61[ՐՏidx61];
             if (it.name === name) {
                 return it;
             }
@@ -6114,6 +6372,7 @@ var ՐՏ_modules = {};
     function default_state() {
         var ret;
         ret = {
+            is_logged: false,
             ctask: null,
             flash: {
                 msg: "Hi",
@@ -6141,7 +6400,7 @@ var ՐՏ_modules = {};
         return ret;
     }
     vc = new V_collector();
-    var State = (ՐՏ_58 = class State extends RS_state_api {
+    var State = (ՐՏ_60 = class State extends RS_state_api {
         constructor (vue, getter_factory, state) {
             super(vc, vue, state || default_state());
             var self = this;
@@ -6197,56 +6456,56 @@ var ՐՏ_modules = {};
             self.state.flash.status = status;
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_58.prototype, {
+        Object.defineProperties(ՐՏ_60.prototype, {
             set_modal_inner: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.set_modal_inner)
+                value: vc.mutation(ՐՏ_60.prototype.set_modal_inner)
             },
             compile_error: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.compile_error)
+                value: vc.mutation(ՐՏ_60.prototype.compile_error)
             },
             set_modal_promise: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.set_modal_promise)
+                value: vc.mutation(ՐՏ_60.prototype.set_modal_promise)
             },
             set_modal_promise_ok: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.set_modal_promise_ok)
+                value: vc.mutation(ՐՏ_60.prototype.set_modal_promise_ok)
             },
             toggle_modal: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.toggle_modal)
+                value: vc.mutation(ՐՏ_60.prototype.toggle_modal)
             },
             toggle_busy: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.toggle_busy)
+                value: vc.mutation(ՐՏ_60.prototype.toggle_busy)
             },
             toggle_explorer: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.toggle_explorer)
+                value: vc.mutation(ՐՏ_60.prototype.toggle_explorer)
             },
             set_w23p_app: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.set_w23p_app)
+                value: vc.mutation(ՐՏ_60.prototype.set_w23p_app)
             },
             flash: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.mutation(ՐՏ_58.prototype.flash)
+                value: vc.mutation(ՐՏ_60.prototype.flash)
             }
         });
         ;
-    })(), ՐՏ_58);
-    var Store = (ՐՏ_59 = class Store extends RS_store {
+    })(), ՐՏ_60);
+    var Store = (ՐՏ_61 = class Store extends RS_store {
         constructor (rs_req, web23py) {
             super();
             var self = this;
@@ -6256,8 +6515,10 @@ var ՐՏ_modules = {};
             self.actions = vc._actions;
             self_app = window.location.pathname.split("/", 2)[1];
             self.api = {};
-            api_baseURL = web23py === "web3py" ? self_app : self_app + "/default/call/json";
-            self.api.server = new server.API(rs_req.get("axios.min"), "/" + api_baseURL, self.$bus);
+            api_baseURL = web23py === "web3py" ? self_app : self_app + "/default/api";
+            self.api.server = new server.API(rs_req.get("axios.min"), "/" + api_baseURL, self.$bus, function() {
+                return self.dispatch("start_modal", "login");
+            });
             self.api.fs = new FS();
             self.api.CM = rs_req.get("codemirror/lib/codemirror");
             self.state_api.state.get_fs = function() {
@@ -6294,25 +6555,56 @@ var ՐՏ_modules = {};
                     self.commit("/explorer.save_as", null);
                 }
             });
+            function on_server(a) {
+                var msg;
+                if (a.event === "error") {
+                    self.flash("server error: " + a.data.message, "error");
+                } else {
+                    msg = a.data.flash;
+                    if (msg) {
+                        self.flash(msg, "ok");
+                    }
+                }
+            }
+            self.$on("server", on_server);
             function process_file(cmd, fid) {
-                var fs, fdata;
+                var ՐՏitr62, ՐՏidx62;
+                var fs, fdata, content, frm_data, k, post_data;
                 fs = self.api.fs;
                 fdata = fs.get_info(fid, true);
                 fdata.path = fs.path_by_id(fid).path;
-                fdata.content = fdata.obj.content;
+                content = fdata.obj.content;
                 delete fdata.obj;
                 fdata.w23p_app = self.get("w23p_app");
-                self.api.server.post(cmd, {
-                    fdata: fdata
-                }).then(function(resp) {
+                if (cmd === "write_file") {
+                    frm_data = new FormData();
+                    ՐՏitr62 = ՐՏ_Iterable(Object.keys(fdata));
+                    for (ՐՏidx62 = 0; ՐՏidx62 < ՐՏitr62.length; ՐՏidx62++) {
+                        k = ՐՏitr62[ՐՏidx62];
+                        frm_data.append(k, fdata[k]);
+                    }
+                    frm_data.append("content", new Blob([ content ], {
+                        type: "text/plain"
+                    }));
+                    post_data = frm_data;
+                } else if (cmd === "del_file") {
+                    post_data = {
+                        fdata: fdata
+                    };
+                } else {
+                    throw new Error("unknown command: " + cmd);
+                }
+                self.api.server.post(cmd, post_data).then(function(resp) {
                     var e;
                     ՐՏ_print("server_resp: ", resp.data);
                     if (cmd === "write_file" && resp.data.md5_hash && !resp.data.error) {
                         fs.files[fid].md5_hash = resp.data.md5_hash;
                     }
                     if (e = resp.data.error) {
-                        self.flash("Server error: " + e);
+                        self.flash("Server error: " + e, "error");
                     }
+                }, function(e) {
+                    self.flash("Server error: " + e.message, "error");
                 });
             }
             self.api.fs.on("write_file", function(fid) {
@@ -6337,6 +6629,26 @@ var ՐՏ_modules = {};
                 }
             }
             return ret;
+        }
+        *try_connect () {
+            var self = this;
+            self.state_api.state.is_logged = (yield self.api.server.get("try_connect")) && true;
+        }
+        *login (data) {
+            var self = this;
+            var pwd;
+            pwd = data.get("password");
+            self.state_api.state.is_logged = (yield self.api.server.post("login", {
+                password: pwd
+            })).data.user;
+        }
+        *logout () {
+            var self = this;
+            self.commit("toggle_busy", true);
+            yield self.api.server.post("logout");
+            self.commit("toggle_busy", false);
+            self.state_api.state.is_logged = false;
+            self.dispatch("start_modal", "login");
         }
         *w23p_app_list () {
             var self = this;
@@ -6375,6 +6687,10 @@ var ՐՏ_modules = {};
                 yield self.dispatch("/editor.close_all");
             } else if (cmd === "close_all") {
                 self.dispatch("/editor.close_all");
+            } else if (cmd === "logout") {
+                self.dispatch("logout");
+            } else if (cmd === "reload_apps") {
+                self.dispatch("reload_apps");
             }
         }
         *load_fs_from_srv (w23p_app) {
@@ -6429,11 +6745,18 @@ var ՐՏ_modules = {};
             app = yield self.dispatch("start_modal", "app_selector", {
                 app_list: self.get("w23p_app_list")
             });
-            if (app !== "cancel") {
-                self.dispatch("/editor.close_all");
-                self.commit("/explorer.set_dir", 0);
-                return self.dispatch("load_fs_from_srv", app);
+            if (app === "cancel") {
+                return;
             }
+            if (!(yield self.dispatch("/editor.close_all"))) {
+                return;
+            }
+            self.commit("/explorer.set_dir", 0);
+            return self.dispatch("load_fs_from_srv", app);
+        }
+        reload_apps () {
+            var self = this;
+            self.api.server.get("reload");
         }
         compile (compiler, s, fp, compile_only) {
             var self = this;
@@ -6469,50 +6792,75 @@ var ՐՏ_modules = {};
             return compiled;
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_59.prototype, {
+        Object.defineProperties(ՐՏ_61.prototype, {
+            try_connect: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.action(asyncer(ՐՏ_61.prototype.try_connect))
+            },
+            login: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.action(asyncer(ՐՏ_61.prototype.login))
+            },
+            logout: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.action(asyncer(ՐՏ_61.prototype.logout))
+            },
             w23p_app_list: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_59.prototype.w23p_app_list))
+                value: vc.action(asyncer(ՐՏ_61.prototype.w23p_app_list))
+            },
+            flash: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.action(ՐՏ_61.prototype.flash)
             },
             menu_click: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_59.prototype.menu_click))
+                value: vc.action(asyncer(ՐՏ_61.prototype.menu_click))
             },
             load_fs_from_srv: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_59.prototype.load_fs_from_srv))
+                value: vc.action(asyncer(ՐՏ_61.prototype.load_fs_from_srv))
             },
             load_fs: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_59.prototype.load_fs)
+                value: vc.action(ՐՏ_61.prototype.load_fs)
             },
             start_modal: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_59.prototype.start_modal)
+                value: vc.action(ՐՏ_61.prototype.start_modal)
             },
             close_modal: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_59.prototype.close_modal)
+                value: vc.action(ՐՏ_61.prototype.close_modal)
             },
             select_app: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(asyncer(ՐՏ_59.prototype.select_app))
+                value: vc.action(asyncer(ՐՏ_61.prototype.select_app))
+            },
+            reload_apps: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.action(ՐՏ_61.prototype.reload_apps)
             },
             compile: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_59.prototype.compile)
+                value: vc.action(ՐՏ_61.prototype.compile)
             }
         });
         ;
-    })(), ՐՏ_59);
+    })(), ՐՏ_61);
     if (__name__ === "__main__") {
     }
     ՐՏ_modules["store.root"]["vc"] = vc;
@@ -6525,64 +6873,100 @@ var ՐՏ_modules = {};
 })();
 
 (function(){
+    var __name__ = "store";
+
+    ՐՏ_modules["store"]["editor"] = ՐՏ_modules["store.editor"];
+
+    ՐՏ_modules["store"]["explorer"] = ՐՏ_modules["store.explorer"];
+
+    ՐՏ_modules["store"]["root"] = ՐՏ_modules["store.root"];
+})();
+
+(function(){
 
     var __name__ = "__main__";
 
-    var ՐՏ_60;
+    var ՐՏ_62;
     var app_templ, web23py, vc;
-    app_templ = "\n<div>\n    <layout>\n        <div  style = 'width:100%; padding: 0 10px;'>\n            <modal></modal>\n            <div  v-show = 'show_explorer' class = 'explorer'>\n                <folder_content></folder_content>\n            </div>\n            <editor></editor>\n        </div>\n    </layout>\n</div>\n";
-    var v_meth = ՐՏ_modules["asset.rs_vue"].v_meth;
-    var v_computed = ՐՏ_modules["asset.rs_vue"].v_computed;
-    var v_watch = ՐՏ_modules["asset.rs_vue"].v_watch;
+    app_templ = "\n<div>\n    <layout>\n        <div  style = 'width:100%; padding: 0 10px;'>\n            <div  v-show = 'show_explorer' class = 'explorer'>\n                <folder_content  @blur = 'hide_explorer'></folder_content>\n            </div>\n            <editor></editor>\n        </div>\n    </layout>\n</div>\n";
     var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
     
     var common = ՐՏ_modules["asset.common"];
     
-    var folder_content = ՐՏ_modules["components.folder_content"];
-    var editor = ՐՏ_modules["components.editor"];
-    var modal = ՐՏ_modules["components.modal"];
-    var confirm = ՐՏ_modules["components.confirm"];
-    var app_selector = ՐՏ_modules["components.app_selector"];
-    var base_layout = ՐՏ_modules["components.base_layout"];
-    
-    var cerror = ՐՏ_modules["components.error"];
+    var components = ՐՏ_modules["components"];
+    var components = ՐՏ_modules["components"];
+    var components = ՐՏ_modules["components"];
+    var components = ՐՏ_modules["components"];
+    var components = ՐՏ_modules["components"];
+    var components = ՐՏ_modules["components"];
+    var components = ՐՏ_modules["components"];
+    var components = ՐՏ_modules["components"];
     
     var Store = ՐՏ_modules["store.root"].Store;
     
     Vue.use(Store);
-    Vue.options.components = {
-        confirm: confirm.make(),
-        error: cerror.make(),
-        app_selector: app_selector.make()
-    };
+    function reg_components() {
+        var comps, c;
+        comps = "confirm error app_selector login modal".split(/ +/);
+        Vue.options.components = (function() {
+            var ՐՏidx64, ՐՏitr64 = ՐՏ_Iterable(comps), ՐՏres = {}, c;
+            for (ՐՏidx64 = 0; ՐՏidx64 < ՐՏitr64.length; ՐՏidx64++) {
+                c = ՐՏitr64[ՐՏidx64];
+                ՐՏres[c] = components[c].make();
+            }
+            return ՐՏres;
+        })();
+    }
+    reg_components();
     web23py = document.getElementsByTagName("meta")[0].dataset.web23py;
     window.store = new Store(rs_req, web23py);
     vc = new V_collector();
-    var App = (ՐՏ_60 = class App extends RS_vue {
+    var App = (ՐՏ_62 = class App extends RS_vue {
         constructor () {
+            var comps, reg_as, c;
             super(vc);
             var self = this;
             self.store = store;
             self.template = app_templ;
             self.map_store = {
+                try_connect: "try_connect*",
                 show_explorer: "show_explorer",
-                w23p_app: "w23p_app"
+                w23p_app: "w23p_app",
+                is_logged: "is_logged",
+                toggle_explorer: "toggle_explorer~"
             };
-            self.components = {
-                folder_content: folder_content.make(),
-                editor: editor.make(),
-                layout: base_layout.make(),
-                modal: modal.make()
+            comps = "folder_content editor base_layout".split(/ +/);
+            reg_as = {
+                base_layout: "layout"
             };
+            self.components = (function() {
+                var ՐՏidx65, ՐՏitr65 = ՐՏ_Iterable(comps), ՐՏres = {}, c;
+                for (ՐՏidx65 = 0; ՐՏidx65 < ՐՏitr65.length; ՐՏidx65++) {
+                    c = ՐՏitr65[ՐՏidx65];
+                    ՐՏres[reg_as[c] || c] = components[c].make();
+                }
+                return ՐՏres;
+            })();
         }
         _init_data () {
             var self = this;
             return {};
         }
+        hide_explorer () {
+            var self = this;
+            setTimeout(function() {
+                self.toggle_explorer(false);
+            }, 100);
+        }
         *mounted () {
             var self = this;
             var app2edit;
+            store.commit("toggle_busy", false);
+            while (!self.is_logged) {
+                yield self.try_connect();
+            }
+            store.commit("toggle_busy", true);
             yield store.dispatch("w23p_app_list");
             store.commit("toggle_busy", false);
             while (!self.w23p_app) {
@@ -6595,25 +6979,25 @@ var ՐՏ_modules = {};
             }
         }
     }, (function(){
-        Object.defineProperties(ՐՏ_60.prototype, {
+        Object.defineProperties(ՐՏ_62.prototype, {
+            hide_explorer: {
+                enumerable: false, 
+                writable: true, 
+                value: vc.meth(ՐՏ_62.prototype.hide_explorer)
+            },
             mounted: {
                 enumerable: false, 
                 writable: true, 
-                value: common.asyncer(ՐՏ_60.prototype.mounted)
+                value: common.asyncer(ՐՏ_62.prototype.mounted)
             }
         });
         ;
-    })(), ՐՏ_60);
+    })(), ՐՏ_62);
     exports.start = function(el) {
         var app;
         app = new App();
         new Vue(app).$mount(el || "#app");
     };
-    function main() {
-    }
-    if (__name__ === "__main__") {
-        main();
-    }
 })();
 })();
 

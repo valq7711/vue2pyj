@@ -1,10 +1,18 @@
 (function(){
 "use strict";
 var ՐՏ_1;
+function ՐՏ_extends(child, parent) {
+    child.prototype = Object.create(parent.prototype);
+    child.prototype.__base__ = parent;
+    child.prototype.constructor = child;
+}
 function ՐՏ_Iterable(iterable) {
     var tmp;
     if (iterable.constructor === [].constructor || iterable.constructor === "".constructor || (tmp = Array.prototype.slice.call(iterable)).length) {
         return tmp || iterable;
+    }
+    if (Set && iterable.constructor === Set) {
+        return Array.from(iterable);
     }
     return Object.keys(iterable);
 }
@@ -38,48 +46,57 @@ function ՐՏ_eq(a, b) {
     if (a === b) {
         return true;
     }
-    if (Array.isArray(a) && Array.isArray(b) || a instanceof Object && b instanceof Object) {
-        if (a.constructor !== b.constructor || a.length !== b.length) {
+    if (a === void 0 || b === void 0 || a === null || b === null) {
+        return false;
+    }
+    if (a.constructor !== b.constructor) {
+        return false;
+    }
+    if (Array.isArray(a)) {
+        if (a.length !== b.length) {
             return false;
         }
-        if (Array.isArray(a)) {
-            for (i = 0; i < a.length; i++) {
-                if (!ՐՏ_eq(a[i], b[i])) {
-                    return false;
-                }
-            }
-        } else {
-            if (Object.keys(a).length !== Object.keys(b).length) {
+        for (i = 0; i < a.length; i++) {
+            if (!ՐՏ_eq(a[i], b[i])) {
                 return false;
-            }
-            ՐՏitr6 = ՐՏ_Iterable(a);
-            for (ՐՏidx6 = 0; ՐՏidx6 < ՐՏitr6.length; ՐՏidx6++) {
-                i = ՐՏitr6[ՐՏidx6];
-                if (!ՐՏ_eq(a[i], b[i])) {
-                    return false;
-                }
             }
         }
         return true;
+    } else if (a.constructor === Object) {
+        if (Object.keys(a).length !== Object.keys(b).length) {
+            return false;
+        }
+        ՐՏitr6 = ՐՏ_Iterable(a);
+        for (ՐՏidx6 = 0; ՐՏidx6 < ՐՏitr6.length; ՐՏidx6++) {
+            i = ՐՏitr6[ՐՏidx6];
+            if (!ՐՏ_eq(a[i], b[i])) {
+                return false;
+            }
+        }
+        return true;
+    } else if (Set && a.constructor === Set || Map && a.constructor === Map) {
+        if (a.size !== b.size) {
+            return false;
+        }
+        for (i of a) {
+            if (!b.has(i)) {
+                return false;
+            }
+        }
+        return true;
+    } else if (a.constructor === Date) {
+        return a.getTime() === b.getTime();
+    } else if (typeof a.__eq__ === "function") {
+        return a.__eq__(b);
     }
     return false;
 }
 var ՐՏ_modules = {};
-ՐՏ_modules["asset"] = {};
 ՐՏ_modules["asset.fs_path"] = {};
 ՐՏ_modules["asset.common"] = {};
 ՐՏ_modules["asset.rs_require"] = {};
+ՐՏ_modules["asset"] = {};
 ՐՏ_modules["load_js"] = {};
-
-(function(){
-    var __name__ = "asset";
-
-    ՐՏ_modules["asset"]["fs_path"] = ՐՏ_modules["asset.fs_path"];
-
-    ՐՏ_modules["asset"]["common"] = ՐՏ_modules["asset.common"];
-
-    ՐՏ_modules["asset"]["rs_require"] = ՐՏ_modules["asset.rs_require"];
-})();
 
 (function(){
     var __name__ = "asset.fs_path";
@@ -195,57 +212,141 @@ var ՐՏ_modules = {};
 
 (function(){
     var __name__ = "asset.common";
+    class Merge_call {
+        set_key (a) {
+            var self = this;
+            self.cmd = "set_key";
+            self.args = a;
+            return self;
+        }
+        merge (a) {
+            var self = this;
+            self.cmd = "merge";
+            self.args = a;
+            return self;
+        }
+    }
     function asyncer(fun) {
-        var ctx, ret;
-        ctx = {
-            self: void 0,
-            args: void 0
-        };
-        function pret(ok, err) {
-            function inner(f, ret_v, ret_throw) {
-                var v;
-                if (ret_throw) {
-                    v = ret_throw;
-                } else {
-                    try {
-                        f = f || fun.apply(ctx.self, ctx.args);
-                        v = f.next(ret_v);
-                    } catch (ՐՏ_Exception) {
-                        var e = ՐՏ_Exception;
+        var merge_call, ret;
+        merge_call = {};
+        function wrap(ctx) {
+            function pret(ok, err) {
+                function inner(f, opt) {
+                    var ret_v, ret_throw, merge_key, v, p;
+                    if (opt) {
+                        ret_v = opt.ret_v;
+                        ret_throw = opt.ret_throw;
+                        merge_key = opt.merge_key;
+                    }
+                    function _err(e, merge_key) {
                         err(e);
-                        return;
+                        if (merge_key) {
+                            merge_call[merge_key].map(function(cb) {
+                                cb.err(e);
+                            });
+                            delete merge_call[merge_key];
+                        }
                     }
-                }
-                if (!v.done) {
-                    if (v.value instanceof Promise) {
-                        v.value.then(function(ret_v) {
-                            inner(f, ret_v);
-                        }, function(e) {
-                            var v;
-                            try {
-                                v = f.throw(e);
-                            } catch (ՐՏ_Exception) {
-                                var e = ՐՏ_Exception;
-                                err(e);
-                                return;
-                            }
-                            inner(f, null, v);
-                        });
+                    if (ret_throw) {
+                        v = ret_throw;
                     } else {
-                        Promise.resolve(v.value).then(function(ret_v) {
-                            inner(f, ret_v);
-                        });
+                        try {
+                            f = f || fun.apply(ctx.self, ctx.args);
+                            v = f.next(ret_v);
+                        } catch (ՐՏ_Exception) {
+                            var e = ՐՏ_Exception;
+                            _err(e, merge_key);
+                            return;
+                        }
                     }
-                } else {
-                    ok(v.value);
+                    if (v.value instanceof Merge_call) {
+                        if (v.value.cmd === "get_keys") {
+                            Promise.resolve(Object.keys(merge_call)).then(function(ret_v) {
+                                inner(f, {
+                                    ret_v: ret_v,
+                                    merge_key: merge_key
+                                });
+                            });
+                        } else if (v.value.cmd === "merge") {
+                            if (p = merge_call[v.value.args]) {
+                                p.push({
+                                    ok: function(v) {
+                                        ok(v);
+                                    },
+                                    err: function(v) {
+                                        err(v);
+                                    }
+                                });
+                                return;
+                            } else {
+                                merge_key = v.value.args;
+                                merge_call[merge_key] = [];
+                                Promise.resolve(null).then(function(ret_v) {
+                                    inner(f, {
+                                        ret_v: ret_v,
+                                        merge_key: merge_key
+                                    });
+                                });
+                            }
+                        } else {
+                            Promise.resolve(null).then(function(ret_v) {
+                                inner(f, {
+                                    ret_v: ret_v,
+                                    merge_key: merge_key
+                                });
+                            });
+                        }
+                    } else if (!v.done) {
+                        if (v.value instanceof Promise) {
+                            v.value.then(function(ret_v) {
+                                inner(f, {
+                                    ret_v: ret_v,
+                                    merge_key: merge_key
+                                });
+                            }, function(e) {
+                                var v;
+                                try {
+                                    v = f.throw(e);
+                                } catch (ՐՏ_Exception) {
+                                    var e = ՐՏ_Exception;
+                                    _err(e, merge_key);
+                                    return;
+                                }
+                                inner(f, {
+                                    ret_throw: v,
+                                    merge_key: merge_key
+                                });
+                            });
+                        } else {
+                            Promise.resolve(v.value).then(function(ret_v) {
+                                inner(f, {
+                                    ret_v: ret_v,
+                                    merge_key: merge_key
+                                });
+                            });
+                        }
+                    } else {
+                        ok(v.value);
+                        if (merge_key) {
+                            merge_call[merge_key].map(function(cb) {
+                                cb.ok(v.value);
+                            });
+                            delete merge_call[merge_key];
+                        }
+                    }
                 }
+                inner();
             }
-            inner();
+            return pret;
         }
         ret = function() {
-            ctx.self = this;
-            ctx.args = arguments;
-            return new Promise(pret);
+            var ctx, p;
+            ctx = {
+                self: this,
+                args: arguments
+            };
+            p = new Promise(wrap(ctx));
+            return p;
         };
         ret.__name__ = fun.__name__ || fun.name;
         return ret;
@@ -378,9 +479,10 @@ var ՐՏ_modules = {};
         return mousedn;
     }
     function blur_click_listener(el, cb) {
-        var ret, blur;
+        var ret, blur, listen;
         ret = {};
         blur = false;
+        listen = false;
         function doc_click_cap(e) {
             blur = true;
             setTimeout(function() {
@@ -391,15 +493,25 @@ var ՐՏ_modules = {};
             blur = false;
         }
         ret.start = function() {
+            if (listen) {
+                return;
+            }
             document.addEventListener("click", doc_click_cap, true);
             el.addEventListener("click", el_click, true);
+            listen = true;
         };
         ret.stop = function() {
+            if (!listen) {
+                return;
+            }
             document.removeEventListener("click", doc_click_cap, true);
             el.removeEventListener("click", el_click, true);
+            listen = false;
         };
         return ret;
     }
+    ՐՏ_modules["asset.common"]["Merge_call"] = Merge_call;
+
     ՐՏ_modules["asset.common"]["asyncer"] = asyncer;
 
     ՐՏ_modules["asset.common"]["upload_text"] = upload_text;
@@ -568,6 +680,16 @@ var ՐՏ_modules = {};
 })();
 
 (function(){
+    var __name__ = "asset";
+
+    ՐՏ_modules["asset"]["fs_path"] = ՐՏ_modules["asset.fs_path"];
+
+    ՐՏ_modules["asset"]["common"] = ՐՏ_modules["asset.common"];
+
+    ՐՏ_modules["asset"]["rs_require"] = ՐՏ_modules["asset.rs_require"];
+})();
+
+(function(){
     var __name__ = "load_js";
     function load(rs_req) {
         function get_mods() {
@@ -597,8 +719,9 @@ var ՐՏ_modules = {};
         return "hi!";
     };
     function init() {
-        var js_root_dir, rs_req;
-        js_root_dir = window.location.pathname.split("/", 2).join("/") + "/static/js/";
+        var static_ver, js_root_dir, rs_req;
+        static_ver = document.getElementsByTagName("meta")[0].dataset.static_ver;
+        js_root_dir = window.location.pathname.split("/", 2).join("/") + "/static/_" + static_ver + "/js/";
         window.rs_req = rs_req = new rs_require.RS_require({
             js_root_dir: js_root_dir
         });
