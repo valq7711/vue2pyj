@@ -1045,18 +1045,25 @@ var ՐՏ_modules = {};
         return mousedn;
     }
     function blur_click_listener(el, cb) {
-        var ret, blur, listen;
+        var ret, blur, last_id, listen;
         ret = {};
-        blur = false;
+        blur = {};
+        last_id = 0;
         listen = false;
         function doc_click_cap(e) {
-            blur = true;
+            var id;
+            ++last_id;
+            id = last_id;
+            blur[last_id] = true;
             setTimeout(function() {
-                blur && cb(e);
+                var _blur;
+                _blur = blur[id];
+                delete blur[id];
+                _blur && cb(e);
             }, 0);
         }
         function el_click(e) {
-            blur = false;
+            blur[last_id] = false;
         }
         ret.start = function() {
             if (listen) {
@@ -4670,8 +4677,8 @@ var ՐՏ_modules = {};
         }
         mounted () {
             var self = this;
-            self.listener = blur_click_listener(self.$el, function() {
-                self.$emit("blur");
+            self.listener = blur_click_listener(self.$el, function(e) {
+                self.$emit("blur", e);
             });
         }
         beforeDestroy () {
@@ -6888,7 +6895,7 @@ var ՐՏ_modules = {};
 
     var ՐՏ_62;
     var app_templ, web23py, vc;
-    app_templ = "\n<div>\n    <layout>\n        <div  style = 'width:100%; padding: 0 10px;'>\n            <div  v-show = 'show_explorer' class = 'explorer'>\n                <folder_content  @blur = 'hide_explorer'></folder_content>\n            </div>\n            <editor></editor>\n        </div>\n    </layout>\n</div>\n";
+    app_templ = "\n<div>\n    <layout>\n        <div  style = 'width:100%; padding: 0 10px;'>\n            <div  v-show = 'show_explorer' class = 'explorer'>\n                <folder_content  @blur = 'hide_explorer($event)'></folder_content>\n            </div>\n            <editor></editor>\n        </div>\n    </layout>\n</div>\n";
     var RS_vue = ՐՏ_modules["asset.rs_vue"].RS_vue;
     var V_collector = ՐՏ_modules["asset.rs_vue"].V_collector;
     
@@ -6953,11 +6960,13 @@ var ՐՏ_modules = {};
             var self = this;
             return {};
         }
-        hide_explorer () {
+        hide_explorer (e) {
             var self = this;
-            setTimeout(function() {
-                self.toggle_explorer(false);
-            }, 100);
+            if (e.target.style.display !== "none") {
+                setTimeout(function() {
+                    self.toggle_explorer(false);
+                }, 100);
+            }
         }
         *mounted () {
             var self = this;
