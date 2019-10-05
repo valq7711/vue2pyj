@@ -6,7 +6,7 @@ import socket
 import copy
 import gluon.fileutils
 
-response.static_version = '0.0.1'
+response.static_version = '0.0.2'
 response.static_version_urls = True
 
 http_host = request.env.http_host.split(':')[0]
@@ -49,7 +49,7 @@ def index():
         )
     response.delimiters = ('[[', ']]')
     response.view = 'index.html'
-    return dict(web23py='web2py', title = 'Vue2pyj')
+    return dict(web23py='web2py', title = 'Vue2pyj', static_version = response.static_version)
 
 @json_api
 def login(password = None, cb = None):

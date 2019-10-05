@@ -479,18 +479,25 @@ var ՐՏ_modules = {};
         return mousedn;
     }
     function blur_click_listener(el, cb) {
-        var ret, blur, listen;
+        var ret, blur, last_id, listen;
         ret = {};
-        blur = false;
+        blur = {};
+        last_id = 0;
         listen = false;
         function doc_click_cap(e) {
-            blur = true;
+            var id;
+            ++last_id;
+            id = last_id;
+            blur[last_id] = true;
             setTimeout(function() {
-                blur && cb(e);
+                var _blur;
+                _blur = blur[id];
+                delete blur[id];
+                _blur && cb(e);
             }, 0);
         }
         function el_click(e) {
-            blur = false;
+            blur[last_id] = false;
         }
         ret.start = function() {
             if (listen) {
@@ -721,7 +728,8 @@ var ՐՏ_modules = {};
     function init() {
         var static_ver, js_root_dir, rs_req;
         static_ver = document.getElementsByTagName("meta")[0].dataset.static_ver;
-        js_root_dir = window.location.pathname.split("/", 2).join("/") + "/static/_" + static_ver + "/js/";
+        static_ver = static_ver && "/_" + static_ver || "";
+        js_root_dir = window.location.pathname.split("/", 2).join("/") + "/static" + static_ver + "/js/";
         window.rs_req = rs_req = new rs_require.RS_require({
             js_root_dir: js_root_dir
         });
