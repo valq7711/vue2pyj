@@ -6488,9 +6488,10 @@ var ՐՏ_modules = {};
                 }
             });
             function on_server(a) {
-                var msg;
+                var r, w2p_err, msg;
                 if (a.event === "error") {
-                    self.flash("server error: " + a.data.message, "error");
+                    w2p_err = (r = a.data.response) && r.headers.web2py_error || "";
+                    self.flash(`server error: ${a.data.message} ${w2p_err}`, "error");
                 } else {
                     msg = a.data.flash;
                     if (msg) {
@@ -6690,22 +6691,44 @@ var ՐՏ_modules = {};
             var self = this;
             self.api.server.get("reload");
         }
-        compile (compiler, s, fp, compile_only) {
+        *compile_py (code, fp) {
             var self = this;
-            var c_map, compiled, fs, off;
+            var resp, data, err;
+            resp = yield self.api.server.post("compile_py", {
+                w23p_app: self.get("w23p_app"),
+                code: code,
+                fp: fp
+            });
+            data = resp.data;
+            err = data.err && Object.assign(new Error(), data.err);
+            if (err) {
+                err.filename = fp;
+                throw err;
+            }
+            return code;
+        }
+        *compile (compiler, s, fp, compile_only) {
+            var self = this;
+            var c_map, compiled, fs, off, fid;
             c_map = {
                 "vuepy": vuepy_compile,
                 "rs": rs_compile,
-                "rapydscript": rs_compile
+                "rapydscript": rs_compile,
+                "python": function(s, fp) {
+                    return self.compile_py(s, fp);
+                }
             };
             if (!c_map[compiler]) {
                 self.flash("Can`t compile " + fp, "warn");
                 return;
             }
             try {
-                compiled = c_map[compiler](s, fp, self.api.fs);
+                compiled = yield c_map[compiler](s, fp, self.api.fs);
             } catch (ՐՏ_Exception) {
                 var err = ՐՏ_Exception;
+                if (err.response) {
+                    throw err;
+                }
                 self.commit("compile_error", err);
                 return {
                     error: err
@@ -6717,7 +6740,12 @@ var ՐՏ_modules = {};
                 off = fs.on("write_file", function(fid) {
                     self.dispatch("/editor.reload", fid);
                 });
-                vuepy_output.output(compiled, self.api.fs, self.output_path_map);
+                if (compiler === "python") {
+                    fid = fs.id_by_path(fp);
+                    fs.write_file(fid, compiled);
+                } else {
+                    vuepy_output.output(compiled, self.api.fs, self.output_path_map);
+                }
                 off();
                 self.$emit("fs_changed");
             }
@@ -6785,10 +6813,15 @@ var ՐՏ_modules = {};
                 writable: true, 
                 value: vc.action(ՐՏ_61.prototype.reload_apps)
             },
+            compile_py: {
+                enumerable: false, 
+                writable: true, 
+                value: asyncer(ՐՏ_61.prototype.compile_py)
+            },
             compile: {
                 enumerable: false, 
                 writable: true, 
-                value: vc.action(ՐՏ_61.prototype.compile)
+                value: vc.action(asyncer(ՐՏ_61.prototype.compile))
             }
         });
         ;
