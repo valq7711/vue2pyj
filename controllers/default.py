@@ -6,7 +6,7 @@ import socket
 import copy
 import gluon.fileutils
 
-response.static_version = '0.0.2'
+response.static_version = '0.0.3'
 response.static_version_urls = True
 
 http_host = request.env.http_host.split(':')[0]

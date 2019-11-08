@@ -5396,7 +5396,17 @@ var ՐՏ_modules = {};
             externaldecorator = has_simple_decorator(S.decorators, "external");
             class_details = {
                 "static": [],
-                "bound": {}
+                "bound": {},
+                "subscribers": [],
+                "on_def_static": function(cb) {
+                    this.subscribers.push(cb);
+                },
+                "push_static": function(meth) {
+                    this.static.push(meth);
+                    this.subscribers.forEach(function(cb) {
+                        cb(meth);
+                    });
+                }
             };
             parent = null;
             docstring = null;
@@ -5516,14 +5526,14 @@ var ՐՏ_modules = {};
             return definition;
         }
         function function_(in_class, ctor) {
-            var start, is_accessor, name, generator, localvars, staticmethod, function_args, return_annotation, has_special_decorator, docstring, callsSuper, superCall_expr, definition, arg, args;
+            var start, is_accessor, allow_keywords, name, generator, localvars, staticmethod, function_args, return_annotation, has_special_decorator, docstring, callsSuper, superCall_expr, definition, arg, args;
             start = prev();
             is_accessor = ctor === ast.ObjectGetter || ctor === ast.ObjectSetter;
-            name = is_("name") ? as_symbol(in_class ? ast.SymbolDefun : is_accessor ? ast.SymbolAccessor : ast.SymbolLambda) : is_accessor && (is_("string") || is_("num")) ? as_atom_node() : null;
+            name = is_("name") ? kwargs(as_symbol)(in_class ? ast.SymbolDefun : is_accessor ? ast.SymbolAccessor : ast.SymbolLambda, {allow_keywords: true}) : is_accessor && (is_("string") || is_("num")) ? as_atom_node() : null;
             if (in_class && !name) {
                 unexpected();
             }
-            if (name && ՐՏ_in(name.name, tokenizer.JS_KEYWORDS)) {
+            if (!(in_class && options.es6) && name && ՐՏ_in(name.name, tokenizer.JS_KEYWORDS)) {
                 name.name += "_";
             }
             generator = false;
@@ -5537,7 +5547,7 @@ var ՐՏ_modules = {};
                 };
                 if (in_class) {
                     if (has_special_decorator("staticmethod")) {
-                        S.in_scope[S.in_scope.length-2].classes[in_class].static.push(name.name);
+                        S.in_scope[S.in_scope.length-2].classes[in_class].push_static(name.name);
                         staticmethod = true;
                     }
                     if (has_special_decorator("bind") || name.name !== "__init__" && options.auto_bind) {
@@ -5706,9 +5716,6 @@ var ՐՏ_modules = {};
                     docstring = S.in_scope[S.in_scope.length-1].docstring;
                     callsSuper = S.in_scope[S.in_scope.length-1].callsSuper;
                     superCall_expr = S.in_scope[S.in_scope.length-1].superCall_expr;
-                    if (generator) {
-                        ՐՏ_print(S.in_scope[S.in_scope.length-1]);
-                    }
                     localvars = (function() {
                         var ՐՏidx51, ՐՏitr51 = ՐՏ_Iterable(Object.keys(S.in_scope[S.in_scope.length-1].vars)), ՐՏres = [], variable;
                         for (ՐՏidx51 = 0; ՐՏidx51 < ՐՏitr51.length; ՐՏidx51++) {
@@ -6443,7 +6450,7 @@ var ՐՏ_modules = {};
                 unexpected();
             }
         }
-        function as_symbol(type, noerror, token) {
+        function as_symbol(type, noerror, token, allow_keywords) {
             var token_, name, sym;
             token_ = token || S.token;
             if (!tokenizer.is_token(token_, "name")) {
@@ -6453,7 +6460,7 @@ var ՐՏ_modules = {};
                 return null;
             }
             name = token_.value;
-            if (ՐՏ_in(name, tokenizer.JS_KEYWORDS)) {
+            if (!allow_keywords && ՐՏ_in(name, tokenizer.JS_KEYWORDS)) {
                 token_.value += "_";
             }
             sym = new (name === "this" ? ast.This : type)({
@@ -6499,7 +6506,7 @@ var ՐՏ_modules = {};
             }
         }
         function subscripts(expr, allow_calls) {
-            var start, slice_bounds, is_slice, i, str_, ret, className, funcname, is_super, tmp_, args;
+            var start, slice_bounds, is_slice, i, str_, ret, className, funcname, is_super, ast_ClassCall, tmp_, args;
             start = expr.start;
             if (is_("punc", ".")) {
                 next();
@@ -6641,7 +6648,10 @@ var ՐՏ_modules = {};
                         }
                         is_super = S.in_scope.length > 1 && S.in_scope[S.in_scope.length-2].type === "class" && stringifyName(expr.expression) === S.in_scope[S.in_scope.length-2].parent;
                         S.in_scope[S.in_scope.length-1].callsSuper = S.in_scope[S.in_scope.length-1].callsSuper || is_super;
-                        return validateCallArgs(subscripts(new ast.ClassCall({
+                        if (!options.es6 && ՐՏ_in(funcname.property, tokenizer.JS_KEYWORDS)) {
+                            funcname.property += "_";
+                        }
+                        ast_ClassCall = new ast.ClassCall({
                             start: start,
                             class: expr.expression,
                             method: funcname.property,
@@ -6649,7 +6659,15 @@ var ՐՏ_modules = {};
                             static: is_static_method(className, funcname.property),
                             args: func_call_list(),
                             end: prev()
-                        }), true));
+                        });
+                        if (!ast_ClassCall.static && className.on_def_static) {
+                            className.on_def_static(function(static_name) {
+                                if (static_name === funcname.property) {
+                                    ast_ClassCall.static = true;
+                                }
+                            });
+                        }
+                        return validateCallArgs(subscripts(ast_ClassCall, true));
                     } else if (expr instanceof ast.SymbolRef) {
                         tmp_ = expr.name;
                         if (ՐՏ_in(tmp_, STDLIB)) {
