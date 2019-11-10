@@ -133,8 +133,7 @@ def compile_py(fp = None, w23p_app = None, code = None):
     if not fp.endswith('.py'):
         raise HTTP(400, web2py_error = '`%s` is not python file' % fp)
 
-
-    code_raw = code if code is not None else fs2json.safe_read(fp)
+    code_raw = (fs2json.PY2 and code.encode('utf8') or code) if code is not None else fs2json.safe_read(fp)
     code = code_raw.rstrip().replace('\r\n', '\n') + '\n'
     highlight = None
     import _ast
