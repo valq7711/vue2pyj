@@ -6,7 +6,8 @@ import socket
 import copy
 import gluon.fileutils
 
-response.static_version = '0.0.3'
+
+response.static_version = '0.0.4'
 response.static_version_urls = True
 
 http_host = request.env.http_host.split(':')[0]
@@ -17,7 +18,6 @@ try:
              '::1', '127.0.0.1', '::ffff:127.0.0.1')
 except:
     hosts = (http_host, )
-
 
 if request.is_https:
     session.secure()
@@ -42,6 +42,7 @@ def json_api(f):
     API[getattr(f, 'x_name', f.__name__)] = f
     return f
 
+
 def index():
     if not gluon.fileutils.check_credentials(request):
         redirect(URL('admin', 'default', 'index',
@@ -49,7 +50,11 @@ def index():
         )
     response.delimiters = ('[[', ']]')
     response.view = 'index.html'
-    return dict(web23py='web2py', title = 'Vue2pyj', static_version = response.static_version)
+    return dict(web23py='web2py',
+                title = 'Vue2pyj',
+                static_version = response.static_version,
+                app_root = '/'+request.application
+    )
 
 @json_api
 def login(password = None, cb = None):

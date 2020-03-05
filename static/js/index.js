@@ -1,10 +1,27 @@
 (function(){
 "use strict";
 var ՐՏ_1;
+function enumerate(item) {
+    var arr, iter, i;
+    arr = [];
+    iter = ՐՏ_Iterable(item);
+    for (i = 0; i < iter.length; i++) {
+        arr[arr.length] = [ i, item[i] ];
+    }
+    return arr;
+}
 function ՐՏ_extends(child, parent) {
     child.prototype = Object.create(parent.prototype);
     child.prototype.__base__ = parent;
     child.prototype.constructor = child;
+}
+function ՐՏ_in(val, arr) {
+    if (typeof arr.indexOf === "function") {
+        return arr.indexOf(val) !== -1;
+    } else if (typeof arr.has === "function") {
+        return arr.has(val);
+    }
+    return arr.hasOwnProperty(val);
 }
 function ՐՏ_Iterable(iterable) {
     var tmp;
@@ -21,27 +38,11 @@ function ՐՏ_print() {
         console.log.apply(console, arguments);
     }
 }
-function range(start, stop, step) {
-    var length, idx, range;
-    if (arguments.length <= 1) {
-        stop = start || 0;
-        start = 0;
-    }
-    step = arguments[2] || 1;
-    length = Math.max(Math.ceil((stop - start) / step), 0);
-    idx = 0;
-    range = new Array(length);
-    while (idx < length) {
-        range[idx++] = start;
-        start += step;
-    }
-    return range;
-}
 function ՐՏ_type(obj) {
     return obj && obj.constructor && obj.constructor.name ? obj.constructor.name : Object.prototype.toString.call(obj).slice(8, -1);
 }
 function ՐՏ_eq(a, b) {
-    var ՐՏitr6, ՐՏidx6;
+    var ՐՏitr24, ՐՏidx24;
     var i;
     if (a === b) {
         return true;
@@ -66,9 +67,9 @@ function ՐՏ_eq(a, b) {
         if (Object.keys(a).length !== Object.keys(b).length) {
             return false;
         }
-        ՐՏitr6 = ՐՏ_Iterable(a);
-        for (ՐՏidx6 = 0; ՐՏidx6 < ՐՏitr6.length; ՐՏidx6++) {
-            i = ՐՏitr6[ՐՏidx6];
+        ՐՏitr24 = ՐՏ_Iterable(a);
+        for (ՐՏidx24 = 0; ՐՏidx24 < ՐՏitr24.length; ՐՏidx24++) {
+            i = ՐՏitr24[ՐՏidx24];
             if (!ՐՏ_eq(a[i], b[i])) {
                 return false;
             }
@@ -93,13 +94,14 @@ function ՐՏ_eq(a, b) {
 }
 var ՐՏ_modules = {};
 ՐՏ_modules["asset.fs_path"] = {};
-ՐՏ_modules["asset.common"] = {};
+ՐՏ_modules["asset.fs"] = {};
 ՐՏ_modules["asset.rs_require"] = {};
 ՐՏ_modules["asset"] = {};
 ՐՏ_modules["load_js"] = {};
 
 (function(){
     var __name__ = "asset.fs_path";
+
     var RE_FP_INFO;
     RE_FP_INFO = /^((.*?\/)?([^\/]+?))(\.([^\.]+))?$/;
     function is_valid_name(name) {
@@ -196,348 +198,734 @@ var ՐՏ_modules = {};
         return ret;
     }
     ՐՏ_modules["asset.fs_path"]["RE_FP_INFO"] = RE_FP_INFO;
-
     ՐՏ_modules["asset.fs_path"]["is_valid_name"] = is_valid_name;
-
     ՐՏ_modules["asset.fs_path"]["to_arr"] = to_arr;
-
     ՐՏ_modules["asset.fs_path"]["path_arr_resolve"] = path_arr_resolve;
-
     ՐՏ_modules["asset.fs_path"]["path_join"] = path_join;
-
     ՐՏ_modules["asset.fs_path"]["rel_path_join"] = rel_path_join;
-
     ՐՏ_modules["asset.fs_path"]["path_split"] = path_split;
 })();
 
 (function(){
-    var __name__ = "asset.common";
-    class Merge_call {
-        set_key (a) {
+    var __name__ = "asset.fs";
+
+    var fs_path = ՐՏ_modules["asset.fs_path"];
+    
+    class FS_local_keeper {
+        constructor (name, zip) {
             var self = this;
-            self.cmd = "set_key";
-            self.args = a;
-            return self;
+            self.name = name;
+            self.zip = zip;
         }
-        merge (a) {
+        save (fs_obj) {
             var self = this;
-            self.cmd = "merge";
-            self.args = a;
-            return self;
-        }
-    }
-    function asyncer(fun) {
-        var merge_call, ret;
-        merge_call = {};
-        function wrap(ctx) {
-            function pret(ok, err) {
-                function inner(f, opt) {
-                    var ret_v, ret_throw, merge_key, v, p;
-                    if (opt) {
-                        ret_v = opt.ret_v;
-                        ret_throw = opt.ret_throw;
-                        merge_key = opt.merge_key;
-                    }
-                    function _err(e, merge_key) {
-                        err(e);
-                        if (merge_key) {
-                            merge_call[merge_key].map(function(cb) {
-                                cb.err(e);
-                            });
-                            delete merge_call[merge_key];
-                        }
-                    }
-                    if (ret_throw) {
-                        v = ret_throw;
-                    } else {
-                        try {
-                            f = f || fun.apply(ctx.self, ctx.args);
-                            v = f.next(ret_v);
-                        } catch (ՐՏ_Exception) {
-                            var e = ՐՏ_Exception;
-                            _err(e, merge_key);
-                            return;
-                        }
-                    }
-                    if (v.value instanceof Merge_call) {
-                        if (v.value.cmd === "get_keys") {
-                            Promise.resolve(Object.keys(merge_call)).then(function(ret_v) {
-                                inner(f, {
-                                    ret_v: ret_v,
-                                    merge_key: merge_key
-                                });
-                            });
-                        } else if (v.value.cmd === "merge") {
-                            if (p = merge_call[v.value.args]) {
-                                p.push({
-                                    ok: function(v) {
-                                        ok(v);
-                                    },
-                                    err: function(v) {
-                                        err(v);
-                                    }
-                                });
-                                return;
-                            } else {
-                                merge_key = v.value.args;
-                                merge_call[merge_key] = [];
-                                Promise.resolve(null).then(function(ret_v) {
-                                    inner(f, {
-                                        ret_v: ret_v,
-                                        merge_key: merge_key
-                                    });
-                                });
-                            }
-                        } else {
-                            Promise.resolve(null).then(function(ret_v) {
-                                inner(f, {
-                                    ret_v: ret_v,
-                                    merge_key: merge_key
-                                });
-                            });
-                        }
-                    } else if (!v.done) {
-                        if (v.value instanceof Promise) {
-                            v.value.then(function(ret_v) {
-                                inner(f, {
-                                    ret_v: ret_v,
-                                    merge_key: merge_key
-                                });
-                            }, function(e) {
-                                var v;
-                                try {
-                                    v = f.throw(e);
-                                } catch (ՐՏ_Exception) {
-                                    var e = ՐՏ_Exception;
-                                    _err(e, merge_key);
-                                    return;
-                                }
-                                inner(f, {
-                                    ret_throw: v,
-                                    merge_key: merge_key
-                                });
-                            });
-                        } else {
-                            Promise.resolve(v.value).then(function(ret_v) {
-                                inner(f, {
-                                    ret_v: ret_v,
-                                    merge_key: merge_key
-                                });
-                            });
-                        }
-                    } else {
-                        ok(v.value);
-                        if (merge_key) {
-                            merge_call[merge_key].map(function(cb) {
-                                cb.ok(v.value);
-                            });
-                            delete merge_call[merge_key];
-                        }
-                    }
+            function prom(ok, err) {
+                function store_handler(data) {
+                    window.localStorage.setItem(self.name, data);
+                    ok("done");
                 }
-                inner();
+                self.zip.file("fs_store", fs_obj.dumps());
+                self.zip.generateAsync({
+                    type: "string",
+                    compression: "DEFLATE",
+                    compressionOptions: {
+                        level: 9
+                    }
+                }).then(store_handler);
             }
-            return pret;
+            return new Promise(prom);
         }
-        ret = function() {
-            var ctx, p;
-            ctx = {
-                self: this,
-                args: arguments
-            };
-            p = new Promise(wrap(ctx));
-            return p;
-        };
-        ret.__name__ = fun.__name__ || fun.name;
-        return ret;
+        load (fs_obj) {
+            var self = this;
+            function prom(ok, err) {
+                var fzip;
+                function reader(zip) {
+                    zip.file("fs_store").async("string").then(function(s) {
+                        fs_obj.loads(s);
+                        ok("done");
+                    });
+                }
+                fzip = window.localStorage.getItem(self.name);
+                if (fzip) {
+                    self.zip.loadAsync(fzip).then(reader);
+                } else {
+                    err();
+                }
+            }
+            return new Promise(prom);
+        }
     }
-    function upload_text() {
-        function prom(ok, err) {
-            var el, ret;
-            el = document.createElement("input");
-            el.setAttribute("type", "file");
-            el.setAttribute("multiple", true);
-            el.style.display = "none";
-            document.body.appendChild(el);
-            ret = [];
-            el.onchange = function() {
-                var done, i, fr;
-                done = el.files.length;
-                for (i = 0; i < el.files.length; i++) {
-                    fr = new FileReader();
-                    fr._filename_ = el.files[i].name;
-                    fr.onloadend = function(s) {
-                        ret.push({
-                            name: s.target._filename_,
-                            value: s.target.result
+    var FS = (ՐՏ_1 = class FS {
+        clear_content () {
+            var self = this;
+            self.files = {};
+            self.dirs = {};
+            self.last_id = 0;
+            self._reset_map_type_();
+        }
+        constructor () {
+            var self = this;
+            self.files = {};
+            self.dirs = {};
+            self.dirs[0] = {
+                id: 0,
+                name: "",
+                parent: null,
+                content: []
+            };
+            self.last_id = 0;
+            self.cwd_id = 0;
+            self.map_type = {};
+            self._reset_map_type_();
+            self._listeners = {
+                write_file: [],
+                del_file: []
+            };
+            self.fs_path = fs_path;
+        }
+        _doubles_in_dir_content () {
+            var ՐՏitr5, ՐՏidx5, ՐՏitr6, ՐՏidx6;
+            var self = this;
+            var errors, dir_id, dir, tmp, it_id;
+            errors = [];
+            ՐՏitr5 = ՐՏ_Iterable(self.dirs);
+            for (ՐՏidx5 = 0; ՐՏidx5 < ՐՏitr5.length; ՐՏidx5++) {
+                dir_id = ՐՏitr5[ՐՏidx5];
+                dir = self.dirs[dir_id];
+                tmp = {};
+                ՐՏitr6 = ՐՏ_Iterable(dir.content);
+                for (ՐՏidx6 = 0; ՐՏidx6 < ՐՏitr6.length; ՐՏidx6++) {
+                    it_id = ՐՏitr6[ՐՏidx6];
+                    if (tmp[it_id]) {
+                        errors.push({
+                            dir_id: dir_id
                         });
-                        --done;
-                        if (done === 0) {
-                            ok(ret);
-                        }
-                    };
-                    fr.readAsText(el.files[i]);
+                    }
+                    tmp[it_id] = true;
                 }
+            }
+            return errors.length ? errors : null;
+        }
+        _consistency_errors () {
+            var ՐՏitr7, ՐՏidx7, ՐՏitr8, ՐՏidx8, ՐՏ_2, ՐՏitr9, ՐՏidx9;
+            var self = this;
+            var errors, dir_id, dir, it_id, it, f_id, f, parent_dir;
+            errors = [];
+            ՐՏitr7 = ՐՏ_Iterable(self.dirs);
+            for (ՐՏidx7 = 0; ՐՏidx7 < ՐՏitr7.length; ՐՏidx7++) {
+                dir_id = ՐՏitr7[ՐՏidx7];
+                dir = self.dirs[dir_id];
+                ՐՏitr8 = ՐՏ_Iterable(dir.content);
+                for (ՐՏidx8 = 0; ՐՏidx8 < ՐՏitr8.length; ՐՏidx8++) {
+                    it_id = ՐՏitr8[ՐՏidx8];
+                    it = self.get_info(it_id);
+                    if (((ՐՏ_2 = it.parent) !== dir_id && (typeof ՐՏ_2 !== "object" || !ՐՏ_eq(ՐՏ_2, dir_id)))) {
+                        errors.push({
+                            dir_id: dir_id,
+                            it_id: it_id
+                        });
+                    }
+                }
+            }
+            ՐՏitr9 = ՐՏ_Iterable(self.files);
+            for (ՐՏidx9 = 0; ՐՏidx9 < ՐՏitr9.length; ՐՏidx9++) {
+                f_id = ՐՏitr9[ՐՏidx9];
+                f = self.files[f_id];
+                parent_dir = self.dirs[f.parent];
+                if (ՐՏ_in(!f_id, parent_dir.content)) {
+                    errors.push({
+                        dir_id: parent_dir.id,
+                        f_id: f_id
+                    });
+                }
+            }
+            return errors.length ? errors : null;
+        }
+        _reset_map_type_ () {
+            var self = this;
+            self.map_type[self.FILE] = self.files;
+            self.map_type[self.DIR] = self.dirs;
+        }
+        loads (s) {
+            var self = this;
+            var obj;
+            obj = s;
+            if (ՐՏ_type(obj) !== "String") {
+                obj = JSON.stringify(obj);
+            }
+            obj = JSON.parse(obj);
+            self.files = obj.files;
+            self.dirs = obj.dirs;
+            self.last_id = obj.last_id;
+            self._reset_map_type_();
+        }
+        dumps () {
+            var self = this;
+            var data;
+            data = {
+                files: self.files,
+                dirs: self.dirs,
+                last_id: self.last_id
             };
-            el.click();
-            document.body.removeChild(el);
+            return JSON.stringify(data);
         }
-        return new Promise(prom);
-    }
-    function download(s, filename, mime) {
-        var blob, el_data, el;
-        blob = new Blob([ s ], {
-            type: mime || "text/plain;charset=utf-8;"
-        });
-        el_data = window.URL.createObjectURL(blob);
-        el = document.createElement("a");
-        el.setAttribute("href", el_data);
-        el.setAttribute("download", filename);
-        el.style.display = "none";
-        document.body.appendChild(el);
-        el.click();
-        document.body.removeChild(el);
-        window.URL.revokeObjectURL(blob);
-    }
-    function SF(text, props) {
-        function replacer(str_, p) {
-            var t, p_chain;
-            if (t = /^("|')(.+?)("|')$/.exec(p)) {
-                return props[t[2]];
-            }
-            if ((p_chain = p.split(".")) && p_chain.length > 1) {
-                return p_chain.reduce(function(it, p) {
-                    return it[p];
-                }, props);
-            }
-            return props[p];
-        }
-        return text.replace(/\$\{ *(.+?) *\}/g, replacer);
-    }
-    function make_drag_listener(catcher, debounce) {
-        var ctx;
-        ctx = {
-            catcher: catcher,
-            x0: 0,
-            y0: 0,
-            dx: 0,
-            dy: 0,
-            vc: null,
-            debounce: debounce || 50,
-            move_done: null
-        };
-        function mousemove(e) {
-            function process_move() {
-                ctx.dx = e.clientX - ctx.x0;
-                ctx.dy = e.clientY - ctx.y0;
-                ctx.catcher.call(null, "drag_move", e, {
-                    dx: ctx.dx,
-                    dy: ctx.dy,
-                    vc: ctx.vc
-                });
-                ctx.move_done = true;
-            }
-            e.stopPropagation();
-            e.preventDefault();
-            if (ctx.move_done === null) {
-                process_move();
-            } else if (ctx.move_done) {
-                ctx.move_done = false;
-                setTimeout(process_move, ctx.debounce);
-            }
-        }
-        function mouseup(e) {
-            document.removeEventListener("mousemove", mousemove);
-            document.removeEventListener("mouseup", mouseup);
-            e.stopPropagation();
-            e.preventDefault();
-            ctx.catcher.call(null, "drag_stop", e, {
-                dx: ctx.dx,
-                dy: ctx.dy,
-                vc: ctx.vc
-            });
-        }
-        function mousedn(e) {
-            ctx.vc = this;
-            ctx.x0 = e.clientX;
-            ctx.y0 = e.clientY;
-            if (!ctx.catcher) {
-                ctx.catcher = function(what, e, args) {
-                    ctx.vc.$emit(what, e, args);
-                };
-            }
-            document.addEventListener("mousemove", mousemove, false);
-            document.addEventListener("mouseup", mouseup, false);
-            e.stopPropagation();
-            e.preventDefault();
-            ctx.catcher.call(null, "drag_start", e, {
-                x0: ctx.x0,
-                y0: ctx.y0,
-                vc: ctx.vc
-            });
-        }
-        return mousedn;
-    }
-    function blur_click_listener(el, cb) {
-        var ret, blur, last_id, listen;
-        ret = {};
-        blur = {};
-        last_id = 0;
-        listen = false;
-        function doc_click_cap(e) {
+        _create_id () {
+            var self = this;
             var id;
-            ++last_id;
-            id = last_id;
-            blur[last_id] = true;
-            setTimeout(function() {
-                var _blur;
-                _blur = blur[id];
-                delete blur[id];
-                _blur && cb(e);
-            }, 0);
+            id = new Date().valueOf();
+            while (id <= self.last_id) {
+                id = new Date().valueOf();
+            }
+            self.last_id = id;
+            return id.toString();
         }
-        function el_click(e) {
-            blur[last_id] = false;
+        _name_to_id (name, parent_id, scope) {
+            var ՐՏitr10, ՐՏidx10, ՐՏ_3;
+            var self = this;
+            var f_d, id;
+            f_d = typeof scope === "string" ? self[scope] : scope;
+            ՐՏitr10 = ՐՏ_Iterable(self.dirs[parent_id].content);
+            for (ՐՏidx10 = 0; ՐՏidx10 < ՐՏitr10.length; ՐՏidx10++) {
+                id = ՐՏitr10[ՐՏidx10];
+                if (f_d[id] && ((ՐՏ_3 = f_d[id].name) === name || typeof ՐՏ_3 === "object" && ՐՏ_eq(ՐՏ_3, name))) {
+                    return id;
+                }
+            }
+            return false;
         }
-        ret.start = function() {
-            if (listen) {
+        _create_zombie_dir (name, parent_id) {
+            var self = this;
+            var parent_dir, dir_id;
+            parent_id = parent_id.toString();
+            parent_dir = self.dirs[parent_id];
+            if (!parent_dir) {
+                throw new Error("Bad parent_id: " + parent_id);
+            }
+            if (self._name_to_id(name, parent_id, "dirs")) {
+                throw new Error("Dir already exists: " + name);
+            }
+            dir_id = self._create_id();
+            self.dirs[dir_id] = {
+                id: dir_id,
+                name: name,
+                parent: parent_id,
+                content: []
+            };
+            return dir_id;
+        }
+        is_valid_name (name) {
+            var self = this;
+            return fs_path.is_valid_name(name);
+        }
+        to_arr (path) {
+            var self = this;
+            return fs_path.to_arr(path);
+        }
+        get_type (id) {
+            var self = this;
+            if (self.files[id]) {
+                return self.FILE;
+            }
+            if (self.dirs[id]) {
+                return self.DIR;
+            }
+            throw new Error("Bad id: " + id);
+        }
+        create_dir (name, parent_id) {
+            var self = this;
+            var ps, dir_id, parent_dir;
+            if (parent_id === void 0) {
+                ps = fs_path.path_split(name);
+                parent_id = self.id_by_path(ps.dir);
+                name = ps.tail;
+            } else {
+                parent_id = parent_id.toString();
+            }
+            if (!self.dirs[parent_id]) {
+                throw new Error("Bad dir_id: " + parent_id);
+            }
+            dir_id = self._create_zombie_dir(name, parent_id);
+            parent_dir = self.dirs[parent_id];
+            parent_dir.content.push(dir_id);
+            return dir_id;
+        }
+        create_path (path) {
+            var ՐՏitr11, ՐՏidx11;
+            var self = this;
+            var dirs, i, prnt_id, dir_name, dir_id;
+            dirs = self.to_arr(path);
+            if (!dirs || dirs[0] !== "") {
+                throw new Error("bad path: " + path);
                 return;
             }
-            document.addEventListener("click", doc_click_cap, true);
-            el.addEventListener("click", el_click, true);
-            listen = true;
-        };
-        ret.stop = function() {
-            if (!listen) {
-                return;
+            dirs = dirs.slice(1);
+            i = 0;
+            prnt_id = "0";
+            ՐՏitr11 = ՐՏ_Iterable(dirs);
+            for (ՐՏidx11 = 0; ՐՏidx11 < ՐՏitr11.length; ՐՏidx11++) {
+                dir_name = ՐՏitr11[ՐՏidx11];
+                dir_id = self._name_to_id(dir_name, prnt_id, "dirs");
+                if (dir_id) {
+                    ++i;
+                    prnt_id = dir_id;
+                } else {
+                    break;
+                }
             }
-            document.removeEventListener("click", doc_click_cap, true);
-            el.removeEventListener("click", el_click, true);
-            listen = false;
-        };
-        return ret;
-    }
-    ՐՏ_modules["asset.common"]["Merge_call"] = Merge_call;
+            while (dirs[i]) {
+                dir_id = self._create_id();
+                self.dirs[dir_id] = {
+                    id: dir_id,
+                    name: dirs[i],
+                    parent: prnt_id,
+                    content: []
+                };
+                self.dirs[prnt_id].content.push(dir_id);
+                prnt_id = dir_id;
+                ++i;
+            }
+            return dir_id;
+        }
+        create_file (name, dir_id, content) {
+            var ՐՏ_4;
+            var self = this;
+            var ps, id, dt;
+            if (dir_id === void 0) {
+                ps = fs_path.path_split(name);
+                dir_id = self.id_by_path(ps.dir);
+                name = ps.fname;
+            } else {
+                dir_id = dir_id.toString();
+            }
+            if (!self.dirs[dir_id]) {
+                throw new Error("Bad dir_id: " + dir_id);
+            }
+            if (self._name_to_id(name, dir_id, "files")) {
+                throw new Error("File already exists: " + name);
+            }
+            id = self._create_id();
+            dt = new Date().valueOf();
+            self.files[id] = {
+                id: id,
+                name: name,
+                parent: dir_id,
+                content: "",
+                ctime: dt,
+                mtime: dt
+            };
+            self.dirs[dir_id].content.push(id);
+            if ((content !== (ՐՏ_4 = void 0) && (typeof content !== "object" || !ՐՏ_eq(content, ՐՏ_4)))) {
+                self.write_file(id, content);
+            }
+            return id;
+        }
+        del_any (id) {
+            var self = this;
+            if (self.dirs[id]) {
+                self.del_dir(id);
+            } else if (self.files[id]) {
+                self.del_file(id);
+            } else {
+                throw new Error("Bad id: " + id);
+            }
+        }
+        del_file (id) {
+            var ՐՏitr12, ՐՏidx12;
+            var self = this;
+            var f, listener, pdir, idx;
+            f = self.files[id];
+            if (!f) {
+                throw new Error("Bad file_id: " + id);
+            }
+            ՐՏitr12 = ՐՏ_Iterable(self._listeners["del_file"]);
+            for (ՐՏidx12 = 0; ՐՏidx12 < ՐՏitr12.length; ՐՏidx12++) {
+                listener = ՐՏitr12[ՐՏidx12];
+                listener(id);
+            }
+            pdir = self.dirs[f.parent];
+            idx = pdir.content.indexOf(id);
+            pdir.content.splice(idx, 1);
+            delete self.files[id];
+        }
+        del_dir (id, force_del) {
+            var ՐՏitr13, ՐՏidx13;
+            var self = this;
+            var d, child_id, pdir, idx;
+            d = self.dirs[id];
+            if (!d) {
+                throw new Error("Bad dir_id: " + id);
+            } else if (d.content.length && !force_del) {
+                throw new Error("Dir is not empty: " + id);
+            }
+            ՐՏitr13 = ՐՏ_Iterable(d.content.slice(0));
+            for (ՐՏidx13 = 0; ՐՏidx13 < ՐՏitr13.length; ՐՏidx13++) {
+                child_id = ՐՏitr13[ՐՏidx13];
+                if (self.files[child_id]) {
+                    self.del_file(child_id);
+                } else {
+                    self.del_dir(child_id, force_del);
+                }
+            }
+            pdir = self.dirs[d.parent];
+            idx = pdir.content.indexOf(id);
+            pdir.content.splice(idx, 1);
+            delete self.dirs[id];
+        }
+        copy_file (src, dst) {
+            var ՐՏitr14, ՐՏidx14;
+            var self = this;
+            var d, f_id;
+            src = self.files[src];
+            dst = self.dirs[dst];
+            ՐՏitr14 = ՐՏ_Iterable([ src, dst ]);
+            for (ՐՏidx14 = 0; ՐՏidx14 < ՐՏitr14.length; ՐՏidx14++) {
+                d = ՐՏitr14[ՐՏidx14];
+                if (!d) {
+                    throw new Error("Bad dir_id: " + id);
+                }
+            }
+            f_id = self.create_file(src.name, dst.id);
+            self.write_file(f_id, src.content, src.mtime);
+            return f_id;
+        }
+        copy_dir (src, dst) {
+            var ՐՏitr15, ՐՏidx15, ՐՏitr16, ՐՏidx16, ՐՏ_5, ՐՏ_6;
+            var self = this;
+            var d, src_content, dir_id, id;
+            src = self.dirs[src];
+            dst = self.dirs[dst];
+            ՐՏitr15 = ՐՏ_Iterable([ src, dst ]);
+            for (ՐՏidx15 = 0; ՐՏidx15 < ՐՏitr15.length; ՐՏidx15++) {
+                d = ՐՏitr15[ՐՏidx15];
+                if (!d) {
+                    throw new Error("Bad dir_id: " + id);
+                }
+            }
+            src_content = src.content.slice(0);
+            dir_id = self._create_zombie_dir(src.name, dst.id);
+            ՐՏitr16 = ՐՏ_Iterable(src_content);
+            for (ՐՏidx16 = 0; ՐՏidx16 < ՐՏitr16.length; ՐՏidx16++) {
+                id = ՐՏitr16[ՐՏidx16];
+                if (((ՐՏ_5 = self.get_type(id)) === (ՐՏ_6 = self.DIR) || typeof ՐՏ_5 === "object" && ՐՏ_eq(ՐՏ_5, ՐՏ_6))) {
+                    self.copy_dir(id, dir_id);
+                } else {
+                    self.copy_file(id, dir_id);
+                }
+            }
+            dst.content.push(dir_id);
+            return dir_id;
+        }
+        copy_any (src, dst) {
+            var self = this;
+            if (self.files[src]) {
+                return self.copy_file(src, dst);
+            } else if (self.dirs[src]) {
+                return self.copy_dir(src, dst);
+            }
+            throw new Error("Bad src_id: " + id);
+        }
+        move (id, dst_dir_id) {
+            var ՐՏ_7, ՐՏ_8, ՐՏ_9;
+            var self = this;
+            var dst_dir, it, up_dir_id, cur_parent_dir, idx;
+            dst_dir = self.dirs[dst_dir_id];
+            if (!dst_dir) {
+                throw new Error("Bad dst_dir_id: " + dst_dir_id);
+            }
+            it = self.get_info(id, true);
+            if (self._name_to_id(it.name, dst_dir_id, self.map_type[it.type])) {
+                throw new Error("Dir or file already exists in dst_dir: " + it.name);
+            }
+            if (((ՐՏ_7 = it.type) === (ՐՏ_8 = self.DIR) || typeof ՐՏ_7 === "object" && ՐՏ_eq(ՐՏ_7, ՐՏ_8))) {
+                up_dir_id = dst_dir.id;
+                while (up_dir_id) {
+                    if ((up_dir_id === id || typeof up_dir_id === "object" && ՐՏ_eq(up_dir_id, id))) {
+                        throw new Error("Can`t move dir into its child");
+                    }
+                    up_dir_id = self.dirs[up_dir_id].parent;
+                }
+            }
+            cur_parent_dir = self.dirs[it.parent];
+            idx = cur_parent_dir.content.indexOf(it.id);
+            if ((idx === (ՐՏ_9 = -1) || typeof idx === "object" && ՐՏ_eq(idx, ՐՏ_9))) {
+                throw new Error("Unexpected error");
+            }
+            cur_parent_dir.content.splice(idx, 1);
+            dst_dir.content.push(it.id);
+            it.obj.parent = dst_dir.id;
+        }
+        rename (id, new_name) {
+            var self = this;
+            var it;
+            it = self.get_info(id, true);
+            if (self._name_to_id(new_name, it.parent, self.map_type[it.type])) {
+                throw new Error("Dir or file already exists in dst_dir: " + it.name);
+            }
+            it.obj.name = new_name;
+        }
+        get_info (id, with_obj) {
+            var ՐՏ_10;
+            var self = this;
+            var type, obj, ret;
+            type = self.get_type(id);
+            obj = self.map_type[type][id];
+            if (!obj) {
+                throw new Error("Bad id: " + id);
+            }
+            ret = {
+                id: id,
+                name: obj.name,
+                parent: obj.parent,
+                type: type,
+                mtime: obj.mtime,
+                ctime: obj.ctime
+            };
+            if ((type === (ՐՏ_10 = self.FILE) || typeof type === "object" && ՐՏ_eq(type, ՐՏ_10))) {
+                ret.md5_hash = obj.md5_hash;
+            }
+            if (with_obj) {
+                ret.obj = obj;
+            }
+            return ret;
+        }
+        write_file (fid, content, mtime) {
+            var ՐՏitr17, ՐՏidx17;
+            var self = this;
+            var f, listener;
+            if (!(f = self.files[fid])) {
+                throw new Error("Bad id: " + fid);
+            }
+            f.content = content;
+            f.mtime = mtime || new Date().valueOf();
+            ՐՏitr17 = ՐՏ_Iterable(self._listeners["write_file"]);
+            for (ՐՏidx17 = 0; ՐՏidx17 < ՐՏitr17.length; ՐՏidx17++) {
+                listener = ՐՏitr17[ՐՏidx17];
+                listener(fid);
+            }
+        }
+        on (event, listener) {
+            var self = this;
+            if (!self._listeners[event]) {
+                throw new Error("unknown event: " + event);
+            }
+            self._listeners[event].push(listener);
+            return function() {
+                self.off(event, listener);
+            };
+        }
+        off (event, listener) {
+            var ՐՏ_11;
+            var self = this;
+            var lst, idx;
+            if (!(lst = self._listeners[event])) {
+                throw new Error("unknown event: " + event);
+            }
+            idx = lst.indexOf(listener);
+            if ((idx !== (ՐՏ_11 = -1) && (typeof idx !== "object" || !ՐՏ_eq(idx, ՐՏ_11)))) {
+                lst.splice(idx, 1);
+            }
+        }
+        get_file_path (fid) {
+            var self = this;
+            var f, parent, ret;
+            f = self.files[fid];
+            if (!f) {
+                throw new Error("Bad file_id: " + fid);
+            }
+            parent = self.dirs[f.parent];
+            ret = [];
+            while (parent) {
+                ret.push({
+                    id: parent.id,
+                    name: parent.name
+                });
+                parent = self.dirs[parent.parent];
+            }
+            ret.reverse();
+            return ret;
+        }
+        list_dir (dir_id) {
+            var ՐՏitr18, ՐՏidx18;
+            var self = this;
+            var ret, id;
+            if (!self.dirs[dir_id]) {
+                throw new Error("Bad dir_id: " + dir_id);
+            }
+            ret = [];
+            ՐՏitr18 = ՐՏ_Iterable(self.dirs[dir_id].content);
+            for (ՐՏidx18 = 0; ՐՏidx18 < ՐՏitr18.length; ՐՏidx18++) {
+                id = ՐՏitr18[ՐՏidx18];
+                ret.push(id);
+            }
+            return ret;
+        }
+        path_arr_resolve (arr) {
+            var self = this;
+            return fs_path.path_arr_resolve(arr);
+        }
+        path_join () {
+            var self = this;
+            return fs_path.path_join.apply(null, arguments);
+        }
+        id_by_path (path) {
+            var ՐՏitr20, ՐՏidx20;
+            var self = this;
+            var arr_pth, prnt_id, dir_id, not_found, name, id;
+            function find_id(name, parent_id) {
+                var ՐՏitr19, ՐՏidx19, ՐՏ_12;
+                var id, it;
+                ՐՏitr19 = ՐՏ_Iterable(self.dirs[parent_id].content);
+                for (ՐՏidx19 = 0; ՐՏidx19 < ՐՏitr19.length; ՐՏidx19++) {
+                    id = ՐՏitr19[ՐՏidx19];
+                    it = self.dirs[id] || self.files[id];
+                    if (((ՐՏ_12 = it.name) === name || typeof ՐՏ_12 === "object" && ՐՏ_eq(ՐՏ_12, name))) {
+                        return id;
+                    }
+                }
+                return false;
+            }
+            if (!path) {
+                throw new Error("Unexpected path " + path);
+            }
+            arr_pth = self.to_arr(path);
+            if (!arr_pth || ՐՏ_in(!arr_pth[0], [ "", "root" ])) {
+                throw new Error("bad path: " + path);
+            }
+            if (!arr_pth[1]) {
+                return 0;
+            }
+            arr_pth = arr_pth.slice(1);
+            prnt_id = 0;
+            dir_id = 0;
+            not_found = false;
+            ՐՏitr20 = ՐՏ_Iterable(arr_pth);
+            for (ՐՏidx20 = 0; ՐՏidx20 < ՐՏitr20.length; ՐՏidx20++) {
+                name = ՐՏitr20[ՐՏidx20];
+                id = find_id(name, prnt_id);
+                if (id) {
+                    prnt_id = id;
+                } else {
+                    not_found = true;
+                    break;
+                }
+            }
+            if (not_found) {
+                return null;
+            }
+            return id;
+        }
+        path_by_id (id, root_alias) {
+            var self = this;
+            var ret, parent_id, parent_info;
+            root_alias = root_alias || "";
+            ret = {
+                ids: [],
+                infos: [],
+                _path: [],
+                path: ""
+            };
+            id = id.toString();
+            ret.ids.push(id);
+            ret.infos.push(self.get_info(id));
+            ret._path.push(ret.infos[0].name);
+            parent_id = ret.infos[0].parent;
+            while (parent_id) {
+                ret.ids.push(parent_id);
+                parent_info = self.get_info(parent_id);
+                ret.infos.push(parent_info);
+                ret._path.push(parent_info.name);
+                parent_id = self.dirs[parent_id].parent;
+            }
+            ret.ids.reverse();
+            ret.infos.reverse();
+            ret._path.reverse();
+            if (root_alias) {
+                ret.infos[0].name = root_alias;
+                ret._path[0] = root_alias;
+            }
+            ret.path = ret._path.join("/");
+            return ret;
+        }
+    }, (function(){
+        var FILE = "file";
+        var DIR = "dir";
+        Object.defineProperties(ՐՏ_1.prototype, {
+            FILE: {
+                enumerable: true, 
+                writable: true, 
+                value: FILE
 
-    ՐՏ_modules["asset.common"]["asyncer"] = asyncer;
+            },
+            DIR: {
+                enumerable: true, 
+                writable: true, 
+                value: DIR
 
-    ՐՏ_modules["asset.common"]["upload_text"] = upload_text;
-
-    ՐՏ_modules["asset.common"]["download"] = download;
-
-    ՐՏ_modules["asset.common"]["SF"] = SF;
-
-    ՐՏ_modules["asset.common"]["make_drag_listener"] = make_drag_listener;
-
-    ՐՏ_modules["asset.common"]["blur_click_listener"] = blur_click_listener;
+            }
+        });
+    })(), ՐՏ_1);
+    ՐՏ_modules["asset.fs"]["FS_local_keeper"] = FS_local_keeper;
+    ՐՏ_modules["asset.fs"]["FS"] = FS;
 })();
 
 (function(){
     var __name__ = "asset.rs_require";
+
     var fs_path = ՐՏ_modules["asset.fs_path"];
     
-    var asyncer = ՐՏ_modules["asset.common"].asyncer;
-    
+    class Module {
+        static __init_class__ (load_amd) {
+            this.prototype.load_amd = load_amd;
+        }
+        constructor (def_args, path) {
+            var self = this;
+            self.loaded = false;
+            self.ok_err = null;
+            self.path = path || "";
+            self.deps = [];
+            self.dep_mods = {};
+            if (Array.isArray(def_args[0])) {
+                self.deps = def_args.shift();
+                self.dep_count = self.deps.length;
+            }
+            self.init = def_args[0];
+            self.load_deps().then(self.run.bind(self));
+        }
+        on_load_script (ok_err) {
+            var self = this;
+            self.ok_err = ok_err;
+            if (self.loaded) {
+                ok_err.ok(self.exports);
+            }
+        }
+        run (deps) {
+            var ՐՏitr21, ՐՏidx21;
+            var self = this;
+            var i, p;
+            ՐՏitr21 = ՐՏ_Iterable(enumerate(self.deps));
+            for (ՐՏidx21 = 0; ՐՏidx21 < ՐՏitr21.length; ՐՏidx21++) {
+                [i, p] = ՐՏitr21[ՐՏidx21];
+                self.dep_mods[p] = deps[i];
+            }
+            self.exports = self.init.apply(null, deps);
+            self.loaded = true;
+            if (self.ok_err) {
+                self.ok_err.ok(self.exports);
+            }
+        }
+        load_deps () {
+            var ՐՏitr22, ՐՏidx22;
+            var self = this;
+            var p, mod_path;
+            p = [];
+            ՐՏitr22 = ՐՏ_Iterable(self.deps);
+            for (ՐՏidx22 = 0; ՐՏidx22 < ՐՏitr22.length; ՐՏidx22++) {
+                mod_path = ՐՏitr22[ՐՏidx22];
+                p.push(self.load_amd(mod_path, self.path));
+            }
+            return Promise.all(p);
+        }
+    }
     function doc_ready(arg_to_pass) {
         var p;
         p = function(ok, err) {
@@ -552,61 +940,61 @@ var ՐՏ_modules = {};
         }
         return new Promise(p);
     }
-    function prom(f) {
-        var ret;
-        ret = function() {
-            var self, args, p;
-            self = this;
-            args = Array.prototype.slice.call(arguments);
-            p = function(ok, err) {
-                args.push(ok, err);
-                f.apply(self, args);
-            };
-            return new Promise(p);
-        };
-        return ret;
-    }
-    var RS_require = (ՐՏ_1 = class RS_require {
+    class RS_require {
         constructor (cfg) {
             var self = this;
             var define;
             self.cfg = cfg;
             self.modules = {};
-            self.load_stack = [];
+            self._modules = [];
             define = window.define = function(req_list, mod) {
                 self.define(req_list, mod);
             };
-            define.amd = true;
+            define.amd = {};
             self.fs_path = fs_path;
+            Module.__init_class__(self.load_amd.bind(self));
         }
         mount_module (as_name, mod) {
             var self = this;
-            self.modules[as_name] = mod;
+            self.modules[as_name] = {
+                exports: mod,
+                loaded: true,
+                req_chain: []
+            };
         }
-        define (req_list, mod) {
+        define (req_list, cb) {
             var self = this;
-            var mod_name, ok;
-            if (ՐՏ_type(req_list) === "Function") {
-                mod = req_list;
-                req_list = [];
+            var cs;
+            function make_mod(path) {
+                var mod;
+                mod = new Module([ req_list, cb ], path);
+                self._modules.push(mod);
+                return mod;
             }
-            mod_name = self.load_stack[self.load_stack.length-1].name;
-            ok = self.load_stack[self.load_stack.length-1].ok;
-            function mount_mod(req_mods) {
-                self.load_stack.pop();
-                self.mount_module(mod_name, mod.apply(null, req_mods));
-                ok(self.modules[mod_name]);
-            }
-            if (req_list && req_list.length) {
-                self.load_amd_list(req_list, mod_name).then(mount_mod);
+            if ((cs = document.currentScript) && cs.dataset.rs_req) {
+                self.make_mod = make_mod;
             } else {
-                mount_mod([]);
+                make_mod();
             }
         }
-        load_amd (name, requester, ok, err) {
+        on_load_script (path, ok_err) {
             var self = this;
-            var is_url, ret, s, src, js_root_dir;
+            var mod;
+            if (self.make_mod) {
+                mod = self.make_mod(path);
+                self.make_mod = null;
+                mod.on_load_script(ok_err);
+            }
+        }
+        on_error (name) {
+            var self = this;
+            console.log("error on load: ", name);
+        }
+        load_amd (name, requester) {
+            var self = this;
+            var is_url, src, js_root_dir, mod, exp, s, ok_err, p, req_chain;
             is_url = /https?:\/{2}.*/.test(name);
+            src = name;
             if (!is_url) {
                 if (name.startsWith("./")) {
                     name = name.slice(2);
@@ -614,46 +1002,67 @@ var ՐՏ_modules = {};
                 if (requester) {
                     name = fs_path.rel_path_join(requester.split("/").slice(0, -1).join("/"), name);
                 }
+                js_root_dir = self.cfg && self.cfg.js_root_dir || "";
+                src = fs_path.rel_path_join(js_root_dir, name);
             }
-            if (self.load_stack.find(function(it) {
-                var ՐՏ_2;
-                return ((ՐՏ_2 = it.name) === name || typeof ՐՏ_2 === "object" && ՐՏ_eq(ՐՏ_2, name));
-            })) {
-                throw new Error("Circular dependency: " + name + " and " + requester);
-            }
-            ret = self.modules[name];
-            if (ret) {
-                ok(ret);
-            } else {
-                s = document.createElement("script");
-                src = name;
-                if (!is_url) {
-                    js_root_dir = self.cfg && self.cfg.js_root_dir || "";
-                    src = fs_path.rel_path_join(js_root_dir, src);
+            if (mod = self.modules[name]) {
+                if (!mod.loaded) {
+                    if (mod.req_chain.find(function(it) {
+                        return it === name;
+                    })) {
+                        throw new Error("Circular dependency: " + name + " and " + requester);
+                    }
+                    mod.req_chain.push(requester);
                 }
-                s.src = src + ".js";
-                s.async = true;
-                s.onerror = function() {
-                    err(name);
-                };
-                self.load_stack.push({
-                    name: name,
-                    ok: ok
-                });
-                document.head.appendChild(s);
+                exp = mod.exports;
+                return exp instanceof Promise ? exp : Promise.resolve(exp);
             }
+            s = document.createElement("script");
+            s.src = src + ".js";
+            s.async = true;
+            s.onerror = function() {
+                self.on_error(name);
+            };
+            s.dataset.rs_req = true;
+            ok_err = {};
+            p = new Promise(function(ok, err) {
+                ok_err = {
+                    ok: ok,
+                    err: err
+                };
+            });
+            s.onload = function() {
+                self.on_load_script(name, ok_err);
+            };
+            document.head.appendChild(s);
+            p.then(function(exports) {
+                var mod;
+                if (mod = self.modules[name]) {
+                    mod.loaded = true;
+                    mod.exports = exports;
+                } else {
+                    throw new Error("load_stack seems corrupted");
+                }
+            });
+            req_chain = requester ? [ requester ] : [];
+            self.modules[name] = {
+                req_chain: req_chain,
+                exports: p,
+                loaded: false
+            };
+            return p;
         }
-        *load_amd_list (mod_lst, requester) {
-            var ՐՏitr5, ՐՏidx5;
+        load_amd_list (mod_lst, requester) {
+            var ՐՏitr23, ՐՏidx23;
             var self = this;
             var ret, mod;
             ret = [];
-            ՐՏitr5 = ՐՏ_Iterable(mod_lst);
-            for (ՐՏidx5 = 0; ՐՏidx5 < ՐՏitr5.length; ՐՏidx5++) {
-                mod = ՐՏitr5[ՐՏidx5];
-                ret.push(yield self.load_amd(mod, requester));
+            ՐՏitr23 = ՐՏ_Iterable(mod_lst);
+            for (ՐՏidx23 = 0; ՐՏidx23 < ՐՏitr23.length; ՐՏidx23++) {
+                mod = ՐՏitr23[ՐՏidx23];
+                ret.push(self.load_amd(mod, requester));
             }
-            return ret;
+            return Promise.all(ret);
         }
         get (name) {
             var self = this;
@@ -662,27 +1071,11 @@ var ՐՏ_modules = {};
             if (!mod) {
                 throw new Error("Module `" + name + "` is not loaded");
             }
-            return self.modules[name];
+            return self.modules[name].exports;
         }
-    }, (function(){
-        Object.defineProperties(ՐՏ_1.prototype, {
-            load_amd: {
-                enumerable: false, 
-                writable: true, 
-                value: prom(ՐՏ_1.prototype.load_amd)
-            },
-            load_amd_list: {
-                enumerable: false, 
-                writable: true, 
-                value: asyncer(ՐՏ_1.prototype.load_amd_list)
-            }
-        });
-        ;
-    })(), ՐՏ_1);
+    }
+    ՐՏ_modules["asset.rs_require"]["Module"] = Module;
     ՐՏ_modules["asset.rs_require"]["doc_ready"] = doc_ready;
-
-    ՐՏ_modules["asset.rs_require"]["prom"] = prom;
-
     ՐՏ_modules["asset.rs_require"]["RS_require"] = RS_require;
 })();
 
@@ -690,14 +1083,16 @@ var ՐՏ_modules = {};
     var __name__ = "asset";
 
     ՐՏ_modules["asset"]["fs_path"] = ՐՏ_modules["asset.fs_path"];
-
-    ՐՏ_modules["asset"]["common"] = ՐՏ_modules["asset.common"];
-
+    ՐՏ_modules["asset"]["fs"] = ՐՏ_modules["asset.fs"];
     ՐՏ_modules["asset"]["rs_require"] = ՐՏ_modules["asset.rs_require"];
+    var fs = ՐՏ_modules["asset.fs"];
+    var fs_path = ՐՏ_modules["asset.fs_path"];
+    
 })();
 
 (function(){
     var __name__ = "load_js";
+
     function load(rs_req) {
         function get_mods() {
             var mods;
@@ -726,16 +1121,21 @@ var ՐՏ_modules = {};
         return "hi!";
     };
     function init() {
-        var static_ver, js_root_dir, rs_req;
-        static_ver = document.getElementsByTagName("meta")[0].dataset.static_ver;
+        var params, static_ver, app_root, js_root_dir, rs_req;
+        params = document.getElementsByTagName("meta")[0].dataset;
+        static_ver = params.static_ver;
         static_ver = static_ver && "/_" + static_ver || "";
-        js_root_dir = window.location.pathname.split("/", 2).join("/") + "/static" + static_ver + "/js/";
+        app_root = params.app_root || "";
+        if (app_root[app_root.length-1] === "/") {
+            app_root = app_root.slice(0, -1);
+        }
+        js_root_dir = app_root + "/static" + static_ver + "/js/";
         window.rs_req = rs_req = new rs_require.RS_require({
             js_root_dir: js_root_dir
         });
         load_js.load(rs_req).then(function() {
             rs_req.load_amd("app", "").then(function(app) {
-                app.start("#app");
+                app.start("#app", params);
                 ՐՏ_print("Done!!!");
             });
         });
